@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Settings - TheMiiMakers</title>
+		<link rel="stylesheet" href="./global.css"></link>
+	</head>
+	<body>
+		<header>
+			<a href="/"><img src='banner.png'></a><br>
+			<h6><em>In Development</em></h6>
+		</header>
+		<div class="account">
+				<img src="miiImgs/<%= pfp %>.png"> <%= thisUser %>
+				<div class="accDropdown">
+					<a href="/user?user=<%= thisUser %>">Profile</a>
+					<a href="/logout">Logout</a>
+				</div>
+		</div>
+		<div class="content">
+			<div class="left-sidebar">
+				<!--Emojis to be replaced with images (?)
+				Polar: We can probably replace with svg/icons
+				Yeah, I just have to take the time to find/make them :wide_bobert:
+				Google icons fonts.google.com/icons
+				Cool, I'll mess with those soon
+				-->
+				<ul class="sidebar-list">
+					<a href="/search"><li>🔍 Search</li></a>
+					<a href="/top"><li>📈 Top Miis</li></a>
+					<a href="/best"><li>🥇 All-Time Top Miis</li></a>
+					<a href="/recent"><li>⏱️ Recent Miis</li></a>
+					<a href="/official"><li>🌟 Official Miis</li></a>
+				</ul>
+				<br>
+				<ul class="sidebar-list">
+					<a href="/upload"><li>⬆️ Upload</li></a>
+					<!--Make it the user's profile picture, remove this option if not logged in-->
+					<a href="<%= thisUser==='default'?'/signup':'/user?user='+thisUser %>"><li><img src="miiImgs/<%= pfp %>.png" width="18px" height="18px"> Profile</li></a>
+					<a href="/settings"><li>⚙️ Settings</li></a>
+					<a href="/convert"><li>➡️ Convert</li></a>
+					<a href="/qr"><li>📸 QR Options</li></a>
+				</ul>
+			</div>
+				<fieldset>
+					<legend>Settings</legend>
+					<input placeholder="Mii ID for new Profile Picture" id="pfpId">
+					<input type="button" value="Change Profile Picture" onclick="sbmt('pfp')"><br><br>
+
+					<input placeholder="Old Email" id="oEmail"><br>
+					<input placeholder="New Email" id="nEmail"><br>
+					<input type="button" value="Change Email" onclick="sbmt('email')"><br><br>
+
+					<input placeholder="New Username" id="nUser">
+					<input type="button" value="Change Username" onclick="sbmt('user')"><br><br>
+					
+					<input type="password" placeholder="Old Password" id="oPass"><br>
+					<input type="password" placeholder="New Password" id="nPass"><br>
+					<input type="button" value="Change Password" onclick="sbmit('pass')"><br><br>
+
+					<input type="button" value="Permanently delete account and all associated Miis" onclick='sbmt("del")'>
+				</fieldset>
+		</div>
+		<footer>
+			<ul>
+				<li><a href="mailto:kestron@kestron.software">Contact</a></li>
+				<!-- <li><a href="/support">Support</a></li> -->
+				<li><a href="/donate">Donate</a></li>
+				<li><a href='https://discord.gg/k3yVkrrvez'>Discord</a></li>
+			</ul>
+		</footer>
+		<script src="global.js"></script>
+		<script>
+			function sbmt(what){
+				switch(what){
+					case 'pfp':
+						fetch("/changePfp?id="+document.getElementById("pfpId").value).then(d=>d.json()).then(d=>{
+							if(d.okay){
+								location.reload();
+							}
+							else{
+								alert(d.msg);
+							}
+						});
+					break;
+					case 'user':
+						fetch("/changeUser?newUser="+document.getElementById("nUser").value).then(d=>d.json()).then(d=>{
+							if(d.okay){
+								location.reload();
+							}
+							else{
+								alert(d.msg);
+							}
+						});
+					break;
+				}
+			}
+		</script>
+	</body>
+</html>

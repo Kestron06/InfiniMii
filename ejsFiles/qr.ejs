@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<!--Scanning into binary data works, doing anything else doesn't yet-->
+<html>
+	<head>
+	  <meta charset="utf-8">
+	  <title>Scanning QR - TheMiiMakers</title>
+	  <link rel="stylesheet" href="global.css">
+	  <style>
+	    .qr {
+	      font-family:sans-serif;
+	      color: #333;
+	      max-width: 640px;
+	      margin: 0 auto;
+	      position: relative;
+	    }
+	    #loadingMessage {
+	      text-align: center;
+	      padding: 40px;
+	      background-color: #eee;
+	    }
+	    #canvas {
+	      width: 100%;
+	    }
+	    #output {
+	      margin-top: 20px;
+	      background: #eee;
+	      padding: 10px;
+	      padding-bottom: 0;
+	    }
+	    #output div {
+	      padding-bottom: 10px;
+	      word-wrap: break-word;
+	    }
+	    #noQRFound {
+	      text-align: center;
+	    }
+	  </style>
+	</head>
+	<body>
+    <header>
+      <a href="/"><img src='banner.png'></a><br>
+			<h6><em>In Development</em></h6>
+    </header>
+		<div class="account">
+			<% if(thisUser==="default"){ %>
+				<a href="/signup">Sign Up</a> | <a href="/login">Log In</a>
+			<% } else{ %>
+				<img src="miiImgs/<%= pfp %>.png"> <%= thisUser %>
+				<div class="accDropdown">
+					<a href="/user?user=<%= thisUser %>">Profile</a>
+					<a href="/logout">Logout</a>
+				</div>
+			<% } %>
+		</div>
+		<div class="content">
+      <div class="left-sidebar">
+        <!--Emojis to be replaced with images (?)
+        Polar: We can probably replace with svg/icons
+				Yeah, I just have to take the time to find/make them :wide_bobert:
+        Google icons fonts.google.com/icons
+				Cool, I'll mess with those soon
+        -->
+        <ul class="sidebar-list">
+          <a href="/search"><li>🔍 Search</li></a>
+          <a href="/top"><li>📈 Top Miis</li></a>
+          <a href="/best"><li>🥇 All-Time Top Miis</li></a>
+          <a href="/recent"><li>⏱️ Recent Miis</li></a>
+          <a href="/official"><li>🌟 Official Miis</li></a>
+        </ul>
+        <br>
+        <ul class="sidebar-list">
+          <a href="/upload"><li>⬆️ Upload</li></a>
+          <!--Make it the user's profile picture, remove this option if not logged in-->
+					<a href="<%= thisUser==='default'?'/signup':'/user?user='+thisUser %>"><li><img src="miiImgs/<%= pfp %>.png" width="18px" height="18px"> Profile</li></a>
+          <a href="/settings"><li>⚙️ Settings</li></a>
+          <a href="/convert"><li>➡️ Convert</li></a>
+          <a href="/qr"><li>📸 QR Options</li></a>
+        </ul>
+      </div>
+			<form method="POST" enctype="multipart/form-data" action="/convertMii" class="convert" hidden>
+				<fieldset>
+					<legend>Convert</legend>
+					<input type="file" name="mii" accept=".jpg,.png" hidden class="needsQR"><br>
+					I want to convert <select hidden name="fromType">
+						<option>3DS Bin</option>
+					</select>to a <select name="toType">
+						<option>Wii Mii</option>
+						<option>Special Wii Mii</option>
+						<option>Special 3DS Mii</option>
+					</select><br>
+					<input class="3dsbin" required hidden name="3dsbin">
+					<input type="submit"><br>
+					<h6>*Note: 3DS to Wii conversions are not guaranteed to be perfect, the 3DS has more options than the Wii does</h6>
+				</fieldset>
+			</form>
+			<form action="/uploadMii" method="post" enctype="multipart/form-data" class='upload' hidden>
+				<fieldset>
+					<legend>Upload a Mii to the Website</legend>
+					<input type="radio" value="3dsbin" name="type" checked required hidden>
+					<label for="3ds">3DS</label><br>
+					<input name="3dsbin" required hidden class="3dsbin">
+					<input size="250" placeholder="Description..." name="desc">
+					<input type="checkbox" name="official"> <label for="official">This is a Mii that appears in a game by default officially (Please mention which in description). Checking or not checking this box falsely may result in the Mii being taken down. Will be attributed to Nintendo and not you if set as official.</label><br>
+					<input type="submit">
+				</fieldset>
+			</form>
+			<div class="qr">
+				<input type="button" value="Start Scanning" onclick="start(this)">
+			  <div id="loadingMessage">🎥 Click the start button to begin scanning</div>
+			  <canvas id="canvas" hidden></canvas>
+			  <div id="output" hidden>
+			    <div id="outputMessage">No QR code detected.</div>
+			  </div>
+			</div><br><br>
+			<div class="after" hidden>
+				<input type="button" value="Upload Mii" onclick="after('upload')"> <input type="button" value="Convert Mii" onclick="after('convert')"> <input type="button" value="Scan again" onclick="start()">
+			</div>
+		</div>
+    <footer>
+      <ul>
+        <li><a href="mailto:kestron@kestron.software">Contact</a></li>
+        <!-- <li><a href="/support">Support</a></li> -->
+        <li><a href="/donate">Donate</a></li>
+        <li><a href='https://discord.gg/k3yVkrrvez'>Discord</a></li>
+      </ul>
+ 	  </footer>
+		<script src="./easy.qrcode.js" type="text/javascript" charset="utf-8"></script>
+	  <script src="./jsQR.js"></script>
+		<script src="global.js"></script>
+	  <script>
+			var stored;
+			var going=false;
+	    var video = document.createElement("video");
+	    var canvasElement = document.getElementById("canvas");
+	    var canvas = canvasElement.getContext("2d");
+	    var loadingMessage = document.getElementById("loadingMessage");
+	    var outputContainer = document.getElementById("output");
+	    var outputMessage = document.getElementById("outputMessage");
+			let camStream;
+	    function drawLine(begin, end, color) {
+	      canvas.beginPath();
+	      canvas.moveTo(begin.x, begin.y);
+	      canvas.lineTo(end.x, end.y);
+	      canvas.lineWidth = 4;
+	      canvas.strokeStyle = color;
+	      canvas.stroke();
+	    }
+	
+			function start(el){
+				if(el){
+					el.hidden=true;
+				}
+				going=true;
+				document.body.getElementsByClassName("after")[0].hidden=true;
+		    navigator.mediaDevices.getUserMedia({audio:false, video: { facingMode: "environment" } }).then(function(stream) {
+					camStream=stream;
+		      video.srcObject = stream;
+		      video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
+		      video.play();
+		      requestAnimationFrame(tick);
+		    });
+			}
+			function stop(bin){
+				console.log(bin);
+				camStream.getTracks().forEach((track) => track.stop());
+				document.body.getElementsByClassName("after")[0].hidden=false;
+				stored=bin;
+				video.pause();
+				going=false;
+			}
+			function after(act){
+				switch(act){
+					case 'convert':
+						var t="";
+						stored.forEach(byte=>{
+							t+=byte.toString(2).padStart(8,"0");
+						});
+						document.body.getElementsByClassName("3dsbin")[0].value=t;
+						document.body.getElementsByClassName("3dsbin")[1].value=t;
+						document.body.getElementsByClassName("qr")[0].hidden=true;
+						document.body.getElementsByClassName("convert")[0].hidden=false;
+						document.body.getElementsByClassName("after")[0].hidden=true;
+					break;
+					case 'upload':
+						var t="";
+						stored.forEach(byte=>{
+							t+=byte.toString(2).padStart(8,"0");
+						});
+						document.body.getElementsByClassName("3dsbin")[0].value=t;
+						document.body.getElementsByClassName("3dsbin")[1].value=t;
+						document.body.getElementsByClassName("qr")[0].hidden=true;
+						document.body.getElementsByClassName("upload")[0].hidden=false;
+						document.body.getElementsByClassName("after")[0].hidden=true;
+					break;
+				}
+			}
+	
+	    function tick() {
+				if(!going) return;
+	      loadingMessage.innerText = "⌛ Loading video..."
+	      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+	        loadingMessage.hidden = true;
+	        canvasElement.hidden = false;
+	        outputContainer.hidden = false;
+	
+	        canvasElement.height = video.videoHeight;
+	        canvasElement.width = video.videoWidth;
+	        canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+	        var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+	        var code = jsQR(imageData.data, imageData.width, imageData.height, {
+	          inversionAttempts: "dontInvert",
+	        });
+	        if (code) {
+	          drawLine(code.location.topLeftCorner, code.location.topRightCorner, "#00FF00");
+	          drawLine(code.location.topRightCorner, code.location.bottomRightCorner, "#00FF00");
+	          drawLine(code.location.bottomRightCorner, code.location.bottomLeftCorner, "#00FF00");
+	          drawLine(code.location.bottomLeftCorner, code.location.topLeftCorner, "#00FF00");
+	          outputMessage.hidden = true;
+						stop(code.binaryData);
+	        } else {
+	          outputMessage.hidden = false;
+	        }
+	      }
+	      requestAnimationFrame(tick);
+	    }
+	  </script>
+	</body>
+</html>

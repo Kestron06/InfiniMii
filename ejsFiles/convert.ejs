@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Convert - TheMiiMakers</title>
+		<link rel="stylesheet" href="./global.css"></link>
+	</head>
+	<body>
+    <header>
+      <a href="/"><img src='banner.png'></a><br>
+			<h6><em>In Development</em></h6>
+    </header>
+		<div class="account">
+			<% if(thisUser==="default"){ %>
+				<a href="/signup">Sign Up</a> | <a href="/login">Log In</a>
+			<% } else{ %>
+				<img src="miiImgs/<%= pfp %>.png"> <%= thisUser %>
+				<div class="accDropdown">
+					<a href="/user?user=<%= thisUser %>">Profile</a>
+					<a href="/logout">Logout</a>
+				</div>
+			<% } %>
+		</div>
+		<div class="content">
+      <div class="left-sidebar">
+        <!--Emojis to be replaced with images (?)
+        Polar: We can probably replace with svg/icons
+				Yeah, I just have to take the time to find/make them :wide_bobert:
+        Google icons fonts.google.com/icons
+				Cool, I'll mess with those soon
+        -->
+        <ul class="sidebar-list">
+          <a href="/search"><li>🔍 Search</li></a>
+          <a href="/top"><li>📈 Top Miis</li></a>
+          <a href="/best"><li>🥇 All-Time Top Miis</li></a>
+          <a href="/recent"><li>⏱️ Recent Miis</li></a>
+          <a href="/official"><li>🌟 Official Miis</li></a>
+        </ul>
+        <br>
+        <ul class="sidebar-list">
+          <a href="/upload"><li>⬆️ Upload</li></a>
+          <!--Make it the user's profile picture, remove this option if not logged in-->
+					<a href="<%= thisUser==='default'?'/signup':'/user?user='+thisUser %>"><li><img src="miiImgs/<%= pfp %>.png" width="18px" height="18px"> Profile</li></a>
+          <a href="/settings"><li>⚙️ Settings</li></a>
+          <a href="/convert"><li>➡️ Convert</li></a>
+          <a href="/qr"><li>📸 QR Options</li></a>
+        </ul>
+      </div>
+			<form method="POST" enctype="multipart/form-data" action="/convertMii">
+				<fieldset>
+					<legend>Convert</legend>
+					<a href="/qr">Scan 3DS/Wii U QR Code?</a><br>
+					<input type="file" name="mii" accept=".jpg,.png,.mii,.bin"><br>
+					I want to convert a <select name="fromType">
+						<option>3DS/Wii U</option>
+						<option>Wii</option>
+					</select> Mii to a <select name="toType">
+						<option>Wii Mii</option>
+						<option>3DS/Wii U Mii</option>
+						<option>Special Wii Mii</option>
+						<option>Special 3DS Mii</option>
+					</select><br>
+					<input type="submit"><br>
+					<h6>*Note: 3DS/Wii U to Wii conversions are not guaranteed to be perfect, the 3DS/Wii U has more options than the Wii does. You can read about all of the discrepancies <a href="https://github.com/Kestron06/MiiJS#discrepancies-in-conversion-function" target="_blank">here.</a></h6>
+				</fieldset>
+			</form>
+		</div>
+    <footer>
+      <ul>
+        <li><a href="mailto:kestron@kestron.software">Contact</a></li>
+        <!-- <li><a href="/support">Support</a></li> -->
+        <li><a href="/donate">Donate</a></li>
+        <li><a href='https://discord.gg/k3yVkrrvez'>Discord</a></li>
+      </ul>
+ 	  </footer>
+		<script src="global.js"></script>
+	</body>
+</html>

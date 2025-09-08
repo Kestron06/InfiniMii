@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Signup - TheMiiMakers</title>
+		<link rel="stylesheet" href="./global.css"></link>
+	</head>
+	<body>
+    <header>
+      <a href="/"><img src='banner.png'></a><br>
+			<h6><em>In Development</em></h6>
+    </header>
+		<div class="content">
+      <div class="left-sidebar">
+        <!--Emojis to be replaced with images (?)
+        Polar: We can probably replace with svg/icons
+				Yeah, I just have to take the time to find/make them :wide_bobert:
+        Google icons fonts.google.com/icons
+				Cool, I'll mess with those soon
+        -->
+        <ul class="sidebar-list">
+          <a href="/search"><li>🔍 Search</li></a>
+          <a href="/top"><li>📈 Top Miis</li></a>
+          <a href="/best"><li>🥇 All-Time Top Miis</li></a>
+          <a href="/recent"><li>⏱️ Recent Miis</li></a>
+          <a href="/official"><li>🌟 Official Miis</li></a>
+        </ul>
+        <br>
+        <ul class="sidebar-list">
+          <a href="/upload"><li>⬆️ Upload</li></a>
+          <!--Make it the user's profile picture, remove this option if not logged in-->
+					<a href='/signup'><li><img src="avatars/default.png" width="18px" height="18px"> Profile</li></a>
+          <a href="/settings"><li>⚙️ Settings</li></a>
+          <a href="/convert"><li>➡️ Convert</li></a>
+          <a href="/qr"><li>📸 QR Options</li></a>
+        </ul>
+        <!-- Submit Mii: -->
+				<!--TODO: Have separate forms for 3DS uploads and Wii uploads-->
+        <!--<form action="/uploadMii?type=3ds" method="post" enctype="multipart/form-data">
+          <fieldset>
+            <legend>Submit 3DS Mii</legend>
+            <input type="file" name="mii" id="mii" accept=".jpg,.png">
+            <input type="submit" id="submit">
+          </fieldset>
+        </form>
+        <form action="/uploadMii?type=wii" method="post" enctype="multipart/form-data">
+          <fieldset>
+            <legend>Submit Wii Mii</legend>
+            <input type="file" name="mii" id="mii" accept=".mii,.bin">
+            <input type="submit" id="submit">
+          </fieldset>
+        </form>
+        <form action="/makeSpecialMii?type=3ds" method="post" enctype="multipart/form-data">
+          <fieldset>
+            <legend>Make Special 3DS Mii</legend>
+            <input type="file" name="mii" id="mii" accept=".jpg,.png">
+            <input type="submit" id="submit">
+          </fieldset>
+        </form>
+        <form action="/makeSpecialMii?type=wii" method="post" enctype="multipart/form-data">
+          <fieldset>
+            <legend>Make Special Wii Mii</legend>
+            <input type="file" name="mii" id="mii" accept=".mii,.bin">
+            <input type="submit" id="submit">
+          </fieldset>
+        </form>-->
+      </div>
+			<form method="POST" action="/signup">
+				<fieldset>
+					<legend>Sign Up</legend>
+					<input placeholder="Username" required name="username"> <input type="password" placeholder="Password" required name="pass"> <input placeholder="Email" required name="email"> <input type="submit"><br>
+					<h6>*Note: It can take up to 10 minutes for the email to propagate, especially for gmail emails. Please be patient.</h6>
+				</fieldset>
+			</form>
+		</div>
+    <footer>
+      <ul>
+        <li><a href="mailto:kestron@kestron.software">Contact</a></li>
+        <!-- <li><a href="/support">Support</a></li> -->
+        <li><a href="/donate">Donate</a></li>
+        <li><a href='https://discord.gg/k3yVkrrvez'>Discord</a></li>
+      </ul>
+ 	  </footer>
+		<script src="global.js"></script>
+	</body>
+</html>

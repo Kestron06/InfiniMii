@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!--This is going to look like trash, I'm just going to throw up functionality and go to bed, hopefully will work on styling in the morning or late afternoon-->
+<html>
+	<head>
+		<title>Upload - TheMiiMakers</title>
+		<link rel='stylesheet' href="global.css">
+		
+	</head>
+	<body>
+		<header>
+      <a href="/"><img src='banner.png'></a><br>
+			<h6><em>In Development</em></h6>
+    </header>
+		<div class="account">
+			<% if(thisUser==="default"){ %>
+				<a href="/signup">Sign Up</a> | <a href="/login">Log In</a>
+			<% } else{ %>
+				<img src="miiImgs/<%= pfp %>.png"> <%= thisUser %>
+				<div class="accDropdown">
+					<a href="/user?user=<%= thisUser %>">Profile</a>
+					<a href="/logout">Logout</a>
+				</div>
+			<% } %>
+		</div>
+		<div class='content'>
+      <div class="left-sidebar">
+        <ul class="sidebar-list">
+          <a href="/search"><li>🔍 Search</li></a>
+          <a href="/top"><li>📈 Top Miis</li></a>
+          <a href="/best"><li>🥇 All-Time Top Miis</li></a>
+          <a href="/recent"><li>⏱️ Recent Miis</li></a>
+          <a href="/official"><li>🌟 Official Miis</li></a>
+        </ul>
+        <br>
+        <ul class="sidebar-list">
+          <a href="/upload"><li>⬆️ Upload</li></a>
+          <!--Make it the user's profile picture, remove this option if not logged in-->
+					<a href="<%= thisUser==='default'?'/signup':'/user?user='+thisUser %>"><li><img src="miiImgs/<%= pfp %>.png" width="18px" height="18px"> Profile</li></a>
+          <a href="/settings"><li>⚙️ Settings</li></a>
+          <a href="/convert"><li>➡️ Convert</li></a>
+          <a href="/qr"><li>📸 QR Options</li></a>
+        </ul>
+        <!-- Submit Mii: -->
+				<!--TODO: Have separate forms for 3DS uploads and Wii uploads-->
+      </div>
+			<div class='upload'>
+				<form action="/uploadMii" method="post" enctype="multipart/form-data" id='uploadForm'>
+					<fieldset>
+						<legend>Upload a Mii to the Website</legend>
+						<a href="/qr">Scan 3DS/Wii U QR Code?</a><br>
+						<input type="radio" value="3ds" name="type" checked required>
+						<label for="3ds">3DS/Wii U</label>
+						<input type="radio" value="wii" name="type">
+						<label for="wii">Wii</label><br>
+						<input type="file" name="mii" accept=".mii,.bin,.png,.jpg" required>
+						<textarea maxlength="250" rows="5" cols="25" placeholder="Description..." name="desc"></textarea><br>
+						<input type="checkbox" name="official"> <label for="official">This is a Mii that appears in a game by default officially (Please mention which in description). Checking or not checking this box falsely may result in the Mii being taken down. Will be attributed to Nintendo and not you if set as official.</label><br>
+						<input type="submit">
+					</fieldset>
+				</form>
+				<!--
+				<form action="/makeSpecialMii?type=wii" method="post" enctype="multipart/form-data">
+          <fieldset>
+            <legend>Make Special Wii Mii</legend>
+            <input type="file" name="mii" id="mii" accept=".mii,.bin">
+            <input type="submit" id="submit">
+          </fieldset>
+        </form>
+				-->
+			</div>
+		</div>
+    <footer>
+      <ul>
+        <li><a href="mailto:kestron@kestron.software">Contact</a></li>
+        <!-- <li><a href="/support">Support</a></li> -->
+        <li><a href="/donate">Donate</a></li>
+        <li><a href='https://discord.gg/k3yVkrrvez'>Discord</a></li>
+      </ul>
+ 	  </footer>
+	</body>
+</html>

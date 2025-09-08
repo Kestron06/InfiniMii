@@ -1,0 +1,7 @@
+node_modules
+package-lock.json
+storage.json
+test.js
+uploads/*
+static/miiImgs/*
+static/miiQRs/*
