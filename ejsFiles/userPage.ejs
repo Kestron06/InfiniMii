@@ -2,9 +2,9 @@
 <!--At the moment, I am just throwing information at it and I'll organize it later-->
 <html>
 	<head>
-		<title><%= user.name %> - TheMiiMakers</title>
+		<title><%= user.name %> - InfiniMii</title>
 		<meta content="<%= user.name %>" property="og:title" />
-		<meta content="User <%= user.name %>'s Miis on TheMiiMakers'" property="og:description" />
+		<meta content="User <%= user.name %>'s Miis on InfiniMii'" property="og:description" />
 		<meta content="https://miis.kestron.software/user?user=<%= user.name %>" property="og:url" />
 		<meta content="https://miis.kestron.software/miiImgs/<%= user.miiPfp %>.png" property="og:image" />
 		<meta content="#ff0000" data-react-helmet="true" name="theme-color" />
@@ -21,15 +21,11 @@
 				border-radius:5px;
 				font-size:0.5em;
 				padding:5px;
-				border:
 			}
 		</style>
 	</head>
 	<body>
-		<header>
-			<a href="/"><img src='banner.png'></a><br>
-			<h6><em>In Development</em></h6>
-		</header>
+		<%- header %>
 		<div class="account">
 			<% if(thisUser==="default"){ %>
 				<a href="/signup">Sign Up</a> | <a href="/login">Log In</a>

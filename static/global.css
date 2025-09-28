@@ -313,3 +313,7 @@ footer ul li a:hover {
 .account:hover .account {
 	background-color: rgb(255,255,0);
 }
+
+#banner{
+  width:50%;
+}

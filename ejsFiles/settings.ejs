@@ -1,14 +1,11 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>Settings - TheMiiMakers</title>
+		<title>Settings - InfiniMii</title>
 		<link rel="stylesheet" href="./global.css"></link>
 	</head>
 	<body>
-		<header>
-			<a href="/"><img src='banner.png'></a><br>
-			<h6><em>In Development</em></h6>
-		</header>
+		<%- header %>
 		<div class="account">
 				<img src="miiImgs/<%= pfp %>.png"> <%= thisUser %>
 				<div class="accDropdown">
@@ -57,7 +54,7 @@
 					<input type="password" placeholder="New Password" id="nPass"><br>
 					<input type="button" value="Change Password" onclick="sbmit('pass')"><br><br>
 
-					<input type="button" value="Permanently delete account and all associated Miis" onclick='sbmt("del")'>
+					<input type="button" value="Permanently Delete Account (Miis will be unaffected)" onclick='sbmt("del")'>
 				</fieldset>
 		</div>
 		<footer>

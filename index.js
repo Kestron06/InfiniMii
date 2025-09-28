@@ -11,6 +11,12 @@ const cookieParser = require('cookie-parser');
 var multer = require('multer');
 var upload = multer({ dest: 'uploads/' });
 var globalSalt = process.env.salt;
+
+const header=`<header>
+				<a href="/"><img src='banner.png' id="banner"></a>
+			</header>`;
+const footer=``;
+
 function objCopy(obj) {
 	return JSON.parse(JSON.stringify(obj));
 }
@@ -165,7 +171,7 @@ const site = new express();
 site.use(express.urlencoded({ extended: true }));
 site.use(express.static(path.join(__dirname + '/static')));
 site.use(cookieParser());
-site.use('/favicon.ico', express.static('static/favicon.jpg'))
+site.use('/favicon.ico', express.static('static/favicon.png'));
 site.listen(8080, () => {
 	console.log("Online");
 });
@@ -175,7 +181,9 @@ site.get('/', (req, res) => {
 	let toSend = Object.assign({}, storage, { thisUser: user, pfp: storage.users[user].miiPfp });
 	toSend.miis = api("topMiis");
 	toSend.miiOfDay = storage.miis[storage.miiOfDay];
-	toSend.title = "TheMiiMakers";
+	toSend.title = "InfiniMii";
+	toSend.header=header;
+	toSend.footer=footer;
 	ejs.renderFile('./ejsFiles/miis.ejs', toSend, {}, function(err, str) {
 		if (err) {
 			res.send(err);
@@ -190,7 +198,9 @@ site.get('/top', (req, res) => {
 	let toSend = Object.assign({}, storage, { thisUser: user, pfp: storage.users[user].miiPfp });
 	toSend.miis = api("topMiis");
 	toSend.miiOfDay = storage.miis[storage.miiOfDay];
-	toSend.title = "Top Miis - TheMiiMakers";
+	toSend.title = "Top Miis - InfiniMii";
+	toSend.header=header;
+	toSend.footer=footer;
 	ejs.renderFile('./ejsFiles/miis.ejs', toSend, {}, function(err, str) {
 		if (err) {
 			res.send(err);
@@ -205,7 +215,9 @@ site.get('/best', (req, res) => {
 	let toSend = Object.assign({}, storage, { thisUser: user, pfp: storage.users[user].miiPfp });
 	toSend.miis = api("best");
 	toSend.miiOfDay = storage.miis[storage.miiOfDay];
-	toSend.title = "All-Time Top Miis - TheMiiMakers";
+	toSend.title = "All-Time Top Miis - InfiniMii";
+	toSend.header=header;
+	toSend.footer=footer;
 	ejs.renderFile('./ejsFiles/miis.ejs', toSend, {}, function(err, str) {
 		if (err) {
 			res.send(err);
@@ -220,7 +232,9 @@ site.get('/recent', (req, res) => {
 	let toSend = Object.assign({}, storage, { thisUser: user, pfp: storage.users[user].miiPfp });
 	toSend.miis = api("recent");
 	toSend.miiOfDay = storage.miis[storage.miiOfDay];
-	toSend.title = "Recent Miis - TheMiiMakers";
+	toSend.title = "Recent Miis - InfiniMii";
+	toSend.header=header;
+	toSend.footer=footer;
 	ejs.renderFile('./ejsFiles/miis.ejs', toSend, {}, function(err, str) {
 		if (err) {
 			res.send(err);
@@ -235,7 +249,9 @@ site.get('/official', (req, res) => {
 	let toSend = Object.assign({}, storage, { thisUser: user, pfp: storage.users[user].miiPfp });
 	toSend.miis = api("official");
 	toSend.miiOfDay = storage.miis[storage.miiOfDay];
-	toSend.title = "Official Miis - TheMiiMakers";
+	toSend.title = "Official Miis - InfiniMii";
+	toSend.header=header;
+	toSend.footer=footer;
 	ejs.renderFile('./ejsFiles/otherMiis.ejs', toSend, {}, function(err, str) {
 		if (err) {
 			res.send(err);
@@ -250,7 +266,9 @@ site.get('/searchResults', (req, res) => {
 	let toSend = Object.assign({}, storage, { thisUser: user, pfp: storage.users[user].miiPfp });
 	toSend.miis = api("search",req.query.q);
 	toSend.miiOfDay = storage.miis[storage.miiOfDay];
-	toSend.title = "Search '" + req.query.q + "' - TheMiiMakers"
+	toSend.title = "Search '" + req.query.q + "' - InfiniMii";
+	toSend.header=header;
+	toSend.footer=footer;
 	ejs.renderFile('./ejsFiles/otherMiis.ejs', toSend, {}, function(err, str) {
 		if (err) {
 			res.send(err);
@@ -261,7 +279,7 @@ site.get('/searchResults', (req, res) => {
 	});
 });
 site.get('/search', (req, res) => {
-	ejs.renderFile('./ejsFiles/search.ejs', Object.assign({}, storage, { thisUser: (req.cookies.username || "default"), pfp: storage.users[(req.cookies.username || "default")].miiPfp }), {}, function(err, str) {
+	ejs.renderFile('./ejsFiles/search.ejs', Object.assign({}, storage, { thisUser: (req.cookies.username || "default"), pfp: storage.users[(req.cookies.username || "default")].miiPfp }, {header:header,footer:footer}), {}, function(err, str) {
 		if (err) {
 			res.send(err);
 			console.log(err);
@@ -271,7 +289,7 @@ site.get('/search', (req, res) => {
 	});
 });
 site.get('/upload', (req, res) => {
-	ejs.renderFile('./ejsFiles/upload.ejs', Object.assign({}, storage, { thisUser: (req.cookies.username || "default"), pfp: storage.users[(req.cookies.username || "default")].miiPfp }), {}, function(err, str) {
+	ejs.renderFile('./ejsFiles/upload.ejs', Object.assign({}, storage, { thisUser: (req.cookies.username || "default"), pfp: storage.users[(req.cookies.username || "default")].miiPfp }, {header:header,footer:footer}), {}, function(err, str) {
 		if (err) {
 			res.send(err);
 			console.log(err);
@@ -403,6 +421,8 @@ site.get('/voteMii', (req, res) => {
 site.get('/mii', (req, res) => {
 	let inp = Object.assign({}, storage, { thisUser: (req.cookies.username || "default"), pfp: storage.users[(req.cookies.username || "default")].miiPfp });
 	inp.mii = storage.miis[req.query.id];
+	inp.header=header;
+	inp.footer=footer;
 	ejs.renderFile('./ejsFiles/miiPage.ejs', inp, {}, function(err, str) {
 		if (err) {
 			res.send(err);
@@ -424,6 +444,8 @@ site.get('/user', (req, res) => {
 	storage.users[req.query.user].submissions.forEach(mii => {
 		inp.miis.push(storage.miis[mii]);
 	});
+	inp.header=header;
+	inp.footer=footer;
 	ejs.renderFile('./ejsFiles/userPage.ejs', inp, {}, function(err, str) {
 		if (err) {
 			res.send(err);
@@ -456,7 +478,7 @@ site.get('/logout', async (req, res) => {
 	save();
 });
 site.get('/convert', (req, res) => {
-	ejs.renderFile('./ejsFiles/convert.ejs', Object.assign({}, storage, { thisUser: (req.cookies.username || "default"), pfp: storage.users[(req.cookies.username || "default")].miiPfp }), {}, function(err, str) {
+	ejs.renderFile('./ejsFiles/convert.ejs', Object.assign({}, storage, { thisUser: (req.cookies.username || "default"), pfp: storage.users[(req.cookies.username || "default")].miiPfp },{header:header,footer:footer}), {}, function(err, str) {
 		if (err) {
 			res.send(err);
 			console.log(err);
@@ -466,7 +488,7 @@ site.get('/convert', (req, res) => {
 	});
 });
 site.get('/qr', (req, res) => {
-	ejs.renderFile('./ejsFiles/qr.ejs', Object.assign({}, storage, { thisUser: (req.cookies.username || "default"), pfp: storage.users[(req.cookies.username || "default")].miiPfp }), {}, function(err, str) {
+	ejs.renderFile('./ejsFiles/qr.ejs', Object.assign({}, storage, { thisUser: (req.cookies.username || "default"), pfp: storage.users[(req.cookies.username || "default")].miiPfp },{header:header,footer:footer}), {}, function(err, str) {
 		if (err) {
 			res.send(err);
 			console.log(err);
@@ -480,7 +502,7 @@ site.get('/settings', (req, res) => {
 		res.redirect("/");
 		return;
 	}
-	ejs.renderFile('./ejsFiles/settings.ejs', Object.assign({}, storage, { thisUser: req.cookies.username, pfp: storage.users[req.cookies.username].miiPfp }), {}, function(err, str) {
+	ejs.renderFile('./ejsFiles/settings.ejs', Object.assign({}, storage, { thisUser: req.cookies.username, pfp: storage.users[req.cookies.username].miiPfp}, {header:header,footer:footer}), {}, function(err, str) {
 		if (err) {
 			res.send(err);
 			console.log(err);
@@ -788,7 +810,7 @@ site.post('/signup', (req, res) => {
 		miiPfp: "W1LfG"
 	};
 	let link = "https://miis.kestron.software/verify?user=" + encodeURIComponent(req.body.username) + "&token=" + encodeURIComponent(token);
-	sendEmail(req.body.email, "TheMiiMakers Verification", "Welcome to TheMiiMakers! Click here to finish signing up!<br>" + link + "<br>*Clicking this link will set a browser cookie to keep you logged in");
+	sendEmail(req.body.email, "InfiniMii Verification", "Welcome to InfiniMii! Click here to finish signing up!<br>" + link + "<br>*Clicking this link will set a browser cookie to keep you logged in");
 	res.redirect("/");
 	save();
 });

@@ -2,7 +2,7 @@
 <!--At the moment, I am just throwing information at it and I'll organize it later-->
 <html>
 	<head>
-		<title><%= mii.name %> - TheMiiMakers</title>
+		<title><%= mii.name %> - InfiniMii</title>
 		<meta content="<%= mii.name %>" property="og:title" />
 		<meta content="<%= mii.desc %>" property="og:description" />
 		<meta content="https://miis.kestron.software/mii?id=<%= mii.id %>" property="og:url" />
@@ -33,10 +33,7 @@
 		</style>
 	</head>
 	<body>
-		<header>
-      <a href="/"><img src='banner.png'></a><br>
-			<h6><em>In Development</em></h6>
-    </header>
+		<%- header %>
 		<div class="account">
 			<% if(thisUser==="default"){ %>
 				<a href="/signup">Sign Up</a> | <a href="/login">Log In</a>
