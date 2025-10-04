@@ -2,11 +2,11 @@
 <!--At the moment, I am just throwing information at it and I'll organize it later-->
 <html>
 	<head>
-		<title><%= mii.name %> - InfiniMii</title>
-		<meta content="<%= mii.name %>" property="og:title" />
+		<title><%= mii.meta.name %> - InfiniMii</title>
+		<meta content="<%= mii.meta.name %>" property="og:title" />
 		<meta content="<%= mii.desc %>" property="og:description" />
 		<meta content="https://miis.kestron.software/mii?id=<%= mii.id %>" property="og:url" />
-		<meta content="https://miis.kestron.software/miiImgs/<%= mii.id %>.png" property="og:image" />
+		<meta content="https://miis.kestron.software/miiImgs/<%= mii.id %>.jpg" property="og:image" />
 		<meta content="#ff0000" data-react-helmet="true" name="theme-color" />
 		<link rel="stylesheet" href="global.css">
 		<style>
@@ -38,7 +38,7 @@
 			<% if(thisUser==="default"){ %>
 				<a href="/signup">Sign Up</a> | <a href="/login">Log In</a>
 			<% } else{ %>
-				<img src="miiImgs/<%= pfp %>.png"> <%= thisUser %>
+				<img src="miiImgs/<%= pfp %>.jpg"> <%= thisUser %>
 				<div class="accDropdown">
 					<a href="/user?user=<%= thisUser %>">Profile</a>
 					<a href="/logout">Logout</a>
@@ -58,17 +58,17 @@
         <ul class="sidebar-list">
           <a href="/upload"><li>⬆️ Upload</li></a>
           <!--Make it the user's profile picture, remove this option if not logged in-->
-					<a href="<%= thisUser==='default'?'/signup':'/user?user='+thisUser %>"><li><img src="miiImgs/<%= pfp %>.png" width="18px" height="18px"> Profile</li></a>
+			<a href="<%= thisUser==='default'?'/signup':'/user?user='+thisUser %>"><li><img src="miiImgs/<%= pfp %>.jpg" width="18px" height="18px"> Profile</li></a>
           <a href="/settings"><li>⚙️ Settings</li></a>
           <a href="/convert"><li>➡️ Convert</li></a>
           <a href="/qr"><li>📸 QR Options</li></a>
         </ul>
       </div>
 			<div class="mii">
-				<img src="/miiImgs/<%= mii.id %>.png" class="tinyZoom">
-				<img src="/miiQRs/<%= mii.id %>.png" class="qr">&emsp;
+				<img src="/miiImgs/<%= mii.id %>.jpg" class="tinyZoom">
+				<img src="/miiQRs/<%= mii.id %>.jpg" class="qr">&emsp;
 				<a href="/miiWii?id=<%= mii.id %>"><img src="/wii.png" class="tinyZoom"></a>
-				<h1><%= mii.name %></h1>
+				<h1><%= mii.meta.name %></h1>
 				<input type="button" value="Copy Mii ID (<%= mii.id %>)" onclick="copyId()"><br>
 				<span onclick="likeMii(this,'<%= mii.id %>','<%= miiOfDay %>','<%= users[thisUser].moderator %>')">
 						<% if(!users[thisUser].votedFor.includes(mii.id)&&!users[thisUser].submissions.includes(mii.id)){ %>
@@ -92,8 +92,8 @@
 				<p>
 					<b>Mii Info</b>
 					<br>
-					Birthday: <%= mii.info.birthMonth %>/<%= mii.info.birthday %><br>
-					Creator Name: <%= mii.creatorName %>
+					Birthday: <%= mii.general.birthMonth %>/<%= mii.general.birthday %><br>
+					Creator Name: <%= mii.meta.creatorName %>
 				</p>
 			</div>
 		</div>

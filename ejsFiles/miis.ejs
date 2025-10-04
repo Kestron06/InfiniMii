@@ -11,7 +11,7 @@
 			<% if(thisUser==="default"){ %>
 				<a href="/signup">Sign Up</a> | <a href="/login">Log In</a>
 			<% } else{ %>
-				<img src="miiImgs/<%= pfp %>.png"> <%= thisUser %>
+				<img src="miiImgs/<%= pfp %>.jpg"> <%= thisUser %>
 				<div class="accDropdown">
 					<a href="/user?user=<%= thisUser %>">Profile</a>
 					<a href="/logout">Logout</a>
@@ -37,7 +37,7 @@
         <ul class="sidebar-list">
           <a href="/upload"><li>⬆️ Upload</li></a>
           <!--Make it the user's profile picture, remove this option if not logged in-->
-					<a href="<%= thisUser==='default'?'/signup':'/user?user='+thisUser %>"><li><img src="miiImgs/<%= pfp %>.png" width="18px" height="18px"> Profile</li></a>
+					<a href="<%= thisUser==='default'?'/signup':'/user?user='+thisUser %>"><li><img src="miiImgs/<%= pfp %>.jpg" width="18px" height="18px"> Profile</li></a>
           <a href="/settings"><li>⚙️ Settings</li></a>
           <a href="/convert"><li>➡️ Convert</li></a>
           <a href="/qr"><li>📸 QR Options</li></a>
@@ -77,10 +77,10 @@
         <!--These will be generated automatically, not hardcoded, in the final version-->
 				<% for(var i=0;i<miis.length&&i<50;i++){ %>
         <div class="mii-card" id="<%= miis[i].id %>">
-          <a href=<%= '/mii?id='+miis[i].id %>><img src="miiImgs/<%= miis[i].id %>.png"></a>
+          <a href=<%= '/mii?id='+miis[i].id %>><img src="miiImgs/<%= miis[i].id %>.jpg"></a>
           <div class="flex">
             <div>
-              <h3><%= miis[i].name %></h3>
+              <h3><%= miis[i].meta.name %></h3>
               <a href=<%= "/user?user="+encodeURIComponent(miis[i].uploader) %>><%= miis[i].uploader %></a>
             </div>
 						<span onclick="likeMii(this,'<%= miis[i].id %>','<%= miiOfDay %>','<%= users[thisUser].moderator %>')">
@@ -109,10 +109,10 @@
 					<% if(users[thisUser].moderator){ %>
 					<input placeholder="New Mii of the Day ID?" id="miiOfDayID"> <input type="button" onclick="miiOfDayChange()" value="Change Mii of the Day">
 					<% } %>
-          <a href='/mii?id=<%= miiOfDay.id %>'><img src="miiImgs/<%= miiOfDay.id %>.png"></a>
+          <a href='/mii?id=<%= miiOfDay.id %>'><img src="miiImgs/<%= miiOfDay.id %>.jpg"></a>
           <div class="flex">
             <div>
-              <h3><%= miiOfDay.name %></h3>
+              <h3><%= miiOfDay.meta.name %></h3>
               <a><%= miiOfDay.uploader %></a>
             </div>
 						<% if(!users[thisUser].votedFor.includes(miiOfDay.id)&&!users[thisUser].submissions.includes(miiOfDay.id)){ %>
@@ -121,7 +121,7 @@
 							<svg class="like" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M13.35 20.13c-.76.69-1.93.69-2.69-.01l-.11-.1C5.3 15.27 1.87 12.16 2 8.28c.06-1.7.93-3.33 2.34-4.29 2.64-1.8 5.9-.96 7.66 1.1 1.76-2.06 5.02-2.91 7.66-1.1 1.41.96 2.28 2.59 2.34 4.29.14 3.88-3.3 6.99-8.55 11.76l-.1.09z"/></svg>
 							<% } %>
           </div>
-          <p><%= miiOfDay.desc %></p>
+          <p><%= miiOfDay.desc.length>75?miiOfDay.desc.slice(0,73)+"...":miiOfDay.desc %></p>
         </div>
       </div>
     </div>

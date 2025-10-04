@@ -1,0 +1,50 @@
+- Public Pages
+    - Main Page
+        - Highlighted Mii in a big card
+        - Average Mii in a big card
+        - Show previews of the different browse options
+        - Show buttons to sign up/login if not already
+        - Show buttons to donate, join Discord
+    - Browse Miis Pages
+        - Most Voted
+        - Hot List
+        - Recent
+        - Official Miis
+            - Filter by game/promo material/console found in
+    - Convert Mii
+    - Individual Mii Page | Mods and User may delete, or edit any text based info. Unpublish?
+        - Like Mii
+        - Copy Mii ID
+        - Download Mii
+            - 3DS/Wii U QR Code
+            - Unencrypted 3DS Bin
+            - Encrypted 3DS Bin
+            - Wii Bin
+- Info Pages
+    - What the roles are
+        - Basic (No Role)
+            - Can upload and publish Miis, like other user's Miis
+            - Can NOT upload official Miis
+        - Temporarily Banned
+            - Can do nothing public facing, not even like other user's Miis
+        - Banned
+            - Account is deleted, all actions taken by this user are deleted
+        - Researcher
+            - People not made moderators, but trusted to upload official Miis exactly as they appear in Nintendo games/promo and provide info on them
+        - Moderator
+            - Not given perms of a researcher by default
+            - Can delete Miis, edit Miis, delete all Miis of a user, ban users temporarily
+            - Must be in Kestron Programming Discord for communication purposes, as communication will not be built into the website
+        - Admin
+            - Can do everything a Mod and Researcher can do, make new Mods, remove Mods, and ban users permanently
+            - Must be in Kestron Programming Discord for same reason as Mods must be
+- Logged In Pages
+    - Upload Mii | As opposed to publishing
+    - Settings
+- Private Pages
+    - Uploaded Miis | Option to Publish
+- Mod Pages
+    - 
+- Researcher Pages
+    - Upload Official Miis
+        - Provide more fields such as games, console, or promo material in

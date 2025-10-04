@@ -6,3 +6,5 @@ uploads/*
 static/miiImgs/*
 static/miiQRs/*
 TODO.md
+env.json
+FFLResHigh.dat

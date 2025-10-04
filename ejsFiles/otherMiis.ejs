@@ -11,7 +11,7 @@
 			<% if(thisUser==="default"){ %>
 				<a href="/signup">Sign Up</a> | <a href="/login">Log In</a>
 			<% } else{ %>
-				<img src="miiImgs/<%= pfp %>.png"> <%= thisUser %>
+				<img src="miiImgs/<%= pfp %>.jpg"> <%= thisUser %>
 				<div class="accDropdown">
 					<a href="/user?user=<%= thisUser %>">Profile</a>
 					<a href="/logout">Logout</a>
@@ -37,7 +37,7 @@
         <ul class="sidebar-list">
           <a href="/upload"><li>⬆️ Upload</li></a>
           <!--Make it the user's profile picture, remove this option if not logged in-->
-					<a href="<%= thisUser==='default'?'/signup':'/user?user='+thisUser %>"><li><img src="miiImgs/<%= pfp %>.png" width="18px" height="18px"> Profile</li></a>
+					<a href="<%= thisUser==='default'?'/signup':'/user?user='+thisUser %>"><li><img src="miiImgs/<%= pfp %>.jpg" width="18px" height="18px"> Profile</li></a>
           <a href="/settings"><li>⚙️ Settings</li></a>
           <a href="/convert"><li>➡️ Convert</li></a>
           <a href="/qr"><li>📸 QR Options</li></a>
@@ -77,7 +77,7 @@
         <!--These will be generated automatically, not hardcoded, in the final version-->
 				<% for(var i=0;i<miis.length&&i<50;i++){ %>
         <div class="mii-card" id="<%= miis[i].id %>">
-          <a href=<%= '/mii?id='+miis[i].id %>><img src="miiImgs/<%= miis[i].id %>.png"></a>
+          <a href=<%= '/mii?id='+miis[i].id %>><img src="miiImgs/<%= miis[i].id %>.jpg"></a>
           <div class="flex">
             <div>
               <h3><%= miis[i].name %></h3>
@@ -106,7 +106,7 @@
         </div>
         <!--These will be auto generated in the final version-->
         <div class="mii-card">
-					<a href='/mii?id=<%= miiOfDay.id %>'><img src="miiImgs/<%= miiOfDay.id %>.png"></a>
+					<a href='/mii?id=<%= miiOfDay.id %>'><img src="miiImgs/<%= miiOfDay.id %>.jpg"></a>
           <div class="flex">
             <div>
               <h3><%= miiOfDay.name %></h3>

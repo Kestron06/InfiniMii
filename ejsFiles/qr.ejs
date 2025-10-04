@@ -42,7 +42,7 @@
 			<% if(thisUser==="default"){ %>
 				<a href="/signup">Sign Up</a> | <a href="/login">Log In</a>
 			<% } else{ %>
-				<img src="miiImgs/<%= pfp %>.png"> <%= thisUser %>
+				<img src="miiImgs/<%= pfp %>.jpg"> <%= thisUser %>
 				<div class="accDropdown">
 					<a href="/user?user=<%= thisUser %>">Profile</a>
 					<a href="/logout">Logout</a>
@@ -68,7 +68,7 @@
         <ul class="sidebar-list">
           <a href="/upload"><li>⬆️ Upload</li></a>
           <!--Make it the user's profile picture, remove this option if not logged in-->
-					<a href="<%= thisUser==='default'?'/signup':'/user?user='+thisUser %>"><li><img src="miiImgs/<%= pfp %>.png" width="18px" height="18px"> Profile</li></a>
+					<a href="<%= thisUser==='default'?'/signup':'/user?user='+thisUser %>"><li><img src="miiImgs/<%= pfp %>.jpg" width="18px" height="18px"> Profile</li></a>
           <a href="/settings"><li>⚙️ Settings</li></a>
           <a href="/convert"><li>➡️ Convert</li></a>
           <a href="/qr"><li>📸 QR Options</li></a>

@@ -11,6 +11,7 @@ const cookieParser = require('cookie-parser');
 var multer = require('multer');
 var upload = multer({ dest: 'uploads/' });
 var globalSalt = process.env.salt;
+process.env=require("./env.json");
 
 const header=`<header>
 				<a href="/"><img src='banner.png' id="banner"></a>
@@ -141,17 +142,21 @@ function genToken() {
 	return ret;
 }
 
+function checkAuth(username,token){
+	
+}
+
 function sendEmail(to, subj, cont) {
 	nodemailer.createTransport({
 		host: 'smtp.zoho.com',
 		port: 465,
 		secure: true,
 		auth: {
-			user: "notifications@kestron.software",
-			pass: process.env["emailPass"]
+			user: process.env.email,
+			pass: process.env.emailPass
 		}
 	}).sendMail({
-		from: "notifications@kestron.software",
+		from: process.env.email,
 		to: to,
 		subject: subj,
 		html: cont
@@ -167,14 +172,188 @@ function makeReport(cont) {
 	});
 }
 
+
+//Averaging Helpers
+const isPlainObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+function getNestedAsArrays(obj) {
+  const ret = {};
+  for (const [key, val] of Object.entries(obj)) {
+    if (isPlainObject(val)) {
+      ret[key] = getNestedAsArrays(val);
+    } else {
+      ret[key] = [val];
+    }
+  }
+  return ret;
+}
+function populateNestedArrays(arrayObj, obj) {
+  const ret = structuredClone(arrayObj);
+  for (const [key, val] of Object.entries(obj)) {
+    if (isPlainObject(val)) {
+      if (!ret[key] || !isPlainObject(ret[key])) ret[key] = {};
+      ret[key] = populateNestedArrays(ret[key], val);
+    } else {
+      if (!Array.isArray(ret[key])) ret[key] = [];
+      ret[key].push(val);
+    }
+  }
+  return ret;
+}
+function getCollectedLeavesAcrossMiis() {
+  let acc;
+  for (const mii of Object.values(storage.miis)) {
+    acc = acc ? populateNestedArrays(acc, mii) : getNestedAsArrays(mii);
+  }
+  return acc;
+}
+function mean(nums) {
+	if (!nums.length) return undefined;
+	return nums.reduce((a, b) => a + b, 0) / nums.length;
+}
+function mode(arr) {
+	const counts = new Map();
+	let best = undefined, bestCount = -1, firstIndex = new Map();
+	arr.forEach((v, i) => {
+		const c = (counts.get(v) ?? 0) + 1;
+		counts.set(v, c);
+		if (!firstIndex.has(v)) firstIndex.set(v, i);
+		if (c > bestCount || (c === bestCount && firstIndex.get(v) < firstIndex.get(best))) {
+			best = v; bestCount = c;
+		}
+	});
+	return best;
+}
+function averageValues(values) {
+	const vals = values.filter(v => v !== undefined && v !== null);
+	if (!vals.length) return undefined;
+	const types = new Set(vals.map(v => typeof v));
+	const allNumbers = vals.every(v => typeof v === "number" && Number.isFinite(v));
+	const allBooleans = vals.every(v => typeof v === "boolean");
+	const allStrings = vals.every(v => typeof v === "string");
+	const onlyNumOrBool = vals.every(v => typeof v === "number" || typeof v === "boolean");
+	if (allNumbers) return Math.round(mean(vals));
+	if (allBooleans) {
+		// Tie breaks toward true if equal weight
+		const trues = vals.filter(Boolean).length;
+		const falses = vals.length - trues;
+		return trues >= falses;
+	}
+	if (onlyNumOrBool) {
+		const asNums = vals.map(v => (typeof v === "boolean" ? (v ? 1 : 0) : v));
+		return mean(asNums);
+	}
+	if (allStrings) return mode(vals);
+	return mode(vals);
+}
+function mapLeavesAverage(obj) {
+	if (isPlainObject(obj)) {
+		const out = {};
+		for (const [k, v] of Object.entries(obj)) out[k] = mapLeavesAverage(v);
+		return out;
+	}
+	if (Array.isArray(obj)) return averageValues(obj);
+	return obj;
+}
+function getAverageMii(){
+	return mapLeavesAverage(getCollectedLeavesAcrossMiis());
+}
+
+
 const site = new express();
 site.use(express.urlencoded({ extended: true }));
 site.use(express.static(path.join(__dirname + '/static')));
 site.use(cookieParser());
 site.use('/favicon.ico', express.static('static/favicon.png'));
-site.listen(8080, () => {
-	console.log("Online");
+
+site.listen(8080, async () => {
+	// - All actions here should be finished before we say Online, so as to help limit chances for data corruption, so tasks will be made synchronous even where they need not be -
+
+	console.log("Starting, do not stop...");
+
+	// For Quickly Uploading Batches of Miis
+	await Promise.all(
+		fs.readdirSync("./quickUploads").map(async (file) => {
+			let mii;
+			switch (file.split(".").pop().toLowerCase()) {
+				case "mii":
+					mii = await miijs.convertMii(await miijs.readWiiBin(`./quickUploads/${file}`));
+				break;
+				case "png"://Do the same as JPG
+				case "jpg":
+					mii = await miijs.read3DSQR(`./quickUploads/${file}`);
+				break;
+				case "txt"://Don't go to default handler, but don't do anything
+				return;
+				default:
+					fs.unlinkSync(`./quickUploads/${file}`);
+				return;
+			}
+
+			if (!mii) {
+				console.warn(`Couldn't read ${file}`);
+				fs.unlinkSync(`./quickUploads/${file}`);
+				return;
+			}
+
+			mii.uploadedOn = Date.now();
+			mii.uploader = fs.readFileSync("./quickUploads/uploader.txt", "utf-8");
+			mii.official = mii.uploader === "Nintendo";
+			mii.votes = 1;
+			mii.id = genId();
+			mii.desc = "Uploaded in Bulk";
+
+			storage.miis[mii.id] = mii;
+			storage.miiIds.push(mii.id);
+			(storage.users[mii.uploader] ??= { submissions: [] }).submissions.push(mii.id);
+
+			fs.unlinkSync(`./quickUploads/${file}`);
+			console.log(`Added ${mii.meta.name} from quick uploads`);
+		})
+	);
+	console.log("Finished Checking Quick Uploads Folder");
+
+	// For ensuring QRs are readable
+	await Promise.all(
+		fs.readdirSync("./static/miiQRs").map(async (file) => {
+			try {
+				if (!fs.existsSync(`./static/miiQRs/${file}`)) return;
+				const mii = await miijs.read3DSQR(`./static/miiQRs/${file}`);
+				if (!mii?.meta?.name) {
+					fs.unlinkSync(`./static/miiQRs/${file}`);
+				}
+			}
+			catch (e) {
+				fs.unlinkSync(`./static/miiQRs/${file}`);
+			}
+		})
+	);
+	console.log("Ensured QRs Are Readable For All Miis");
+
+	// Make sure QRs and Thumbnails exist
+	await Promise.all(
+		Object.keys(storage.miis).map(async (miiKey) => {
+			const mii = storage.miis[miiKey];
+
+			if (!fs.existsSync(`./static/miiImgs/${mii.id}.jpg`)) {
+				fs.writeFileSync(`./static/miiImgs/${mii.id}.jpg`, await miijs.renderMii(mii));
+				console.log(`Making image for ${mii.id}`);
+			}
+
+			if (!fs.existsSync(`./static/miiQRs/${mii.id}.jpg`)) {
+				// If write3DSQR is async in your lib, add `await` here.
+				miijs.write3DSQR(mii, `./static/miiQRs/${mii.id}.jpg`);
+				console.log(`Making QR for ${mii.id}`);
+			}
+		})
+	);
+	console.log(`Ensured All Miis Have QRs And Face Renders\nGenerating new average Mii...`);
+	storage.averageMii=getAverageMii();
+	fs.writeFileSync(`./static/miiImgs/average.jpg`, await miijs.renderMii(storage.averageMii));
+	await miijs.write3DSQR(storage.averageMii, `./static/miiQRs/average.jpg`);
+	save();
+	console.log(`All setup finished.\nOnline`);
 });
+
 //The following up to and including /recent are all sorted before being renders in miis.ejs, meaning the file is recycled. / is currently just a clone of /top. /official and /search is more of the same but with a slight change to make Mii of the Day still work without the full Mii array
 site.get('/', (req, res) => {
 	var user = req.cookies.username || "default";
@@ -190,7 +369,7 @@ site.get('/', (req, res) => {
 			console.log(err);
 			return;
 		}
-		res.send(str)
+		res.send(str);
 	});
 });
 site.get('/top', (req, res) => {
@@ -362,7 +541,7 @@ site.get('/deleteMii', (req, res) => {
 						}
 					],
 					"thumbnail": {
-						"url": `https://miis.kestron.software/miiImgs/${mii.id}.png`,
+						"url": `https://miis.kestron.software/miiImgs/${mii.id}.jpg`,
 						"height": 0,
 						"width": 0
 					},
@@ -373,8 +552,8 @@ site.get('/deleteMii', (req, res) => {
 			}));
 			storage.miiIds.splice(storage.miiIds.indexOf(req.query.id), 1);
 			delete storage.miis[req.query.id];
-			fs.unlinkSync("./static/miiImgs/" + req.query.id + ".png");
-			fs.unlinkSync("./static/miiQRs/" + req.query.id + ".png");
+			fs.unlinkSync("./static/miiImgs/" + req.query.id + ".jpg");
+			fs.unlinkSync("./static/miiQRs/" + req.query.id + ".jpg");
 			res.send("{'okay':true}");
 			save();
 		}
@@ -544,7 +723,7 @@ site.get('/changeUser', (req, res) => {
 				"description": `${req.cookies.username} is now ${req.query.newUser}`,
 				"color": 0xff0000,
 				"thumbnail": {
-					"url": `https://miis.kestron.software/miiImgs/${storage.users[req.query.newUser].miiPfp}.png`,
+					"url": `https://miis.kestron.software/miiImgs/${storage.users[req.query.newUser].miiPfp}.jpg`,
 					"height": 0,
 					"width": 0
 				},
@@ -596,7 +775,7 @@ site.get('/changeMiiOfDay', (req, res) => {
 					}
 				],
 				"thumbnail": {
-					"url": `https://miis.kestron.software/miiImgs/${mii.id}.png`,
+					"url": `https://miis.kestron.software/miiImgs/${mii.id}.jpg`,
 					"height": 0,
 					"width": 0
 				},
@@ -643,7 +822,7 @@ site.get('/reportMii',(req,res)=>{
 				}
 			],
 			"thumbnail": {
-				"url": `https://miis.kestron.software/miiImgs/${mii.id}.png`,
+				"url": `https://miis.kestron.software/miiImgs/${mii.id}.jpg`,
 				"height": 0,
 				"width": 0
 			},
@@ -656,12 +835,14 @@ site.get('/reportMii',(req,res)=>{
 	res.send(`{"okay":true}`);
 });
 site.get('/miiWii',(req,res)=>{
-	var mii=miijs.convertMii(storage.miis[req.query.id],"3ds");
+	var mii=miijs.convertMii(storage.miis[req.query.id]);
 	miijs.writeWiiBin(mii,"./static/"+req.query.id+".mii");
-	res.set('Content-Disposition', `attachment; filename="${req.query.id}.mii"`);
-	res.sendFile(path.join(__dirname,"./static/"+req.query.id+".mii"));
+	res.setHeader('Content-Disposition', `attachment; filename="${req.query.id}.mii"`);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.send(miiBuffer);
 	setTimeout(()=>{fs.unlinkSync("./static/"+req.query.id+".mii")},2000);
 });
+
 site.post('/uploadMii', upload.single('mii'), async (req, res) => {
 	try {
 		let uploader = req.cookies.username;
@@ -722,7 +903,7 @@ site.post('/uploadMii', upload.single('mii'), async (req, res) => {
 					}
 				],
 				"thumbnail": {
-					"url": `https://miis.kestron.software/miiImgs/${mii.id}.png`,
+					"url": `https://miis.kestron.software/miiImgs/${mii.id}.jpg`,
 					"height": 0,
 					"width": 0
 				},
@@ -807,7 +988,7 @@ site.post('/signup', (req, res) => {
 		email: hashPassword(req.body.email, hashed.salt).hash,
 		votedFor: [],
 		submissions: [],
-		miiPfp: "W1LfG"
+		miiPfp: "00000"
 	};
 	let link = "https://miis.kestron.software/verify?user=" + encodeURIComponent(req.body.username) + "&token=" + encodeURIComponent(token);
 	sendEmail(req.body.email, "InfiniMii Verification", "Welcome to InfiniMii! Click here to finish signing up!<br>" + link + "<br>*Clicking this link will set a browser cookie to keep you logged in");
