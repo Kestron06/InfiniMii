@@ -1,119 +1,231 @@
 <!DOCTYPE html>
-<!--At the moment, I am just throwing information at it and I'll organize it later-->
 <html>
-	<head>
-		<title><%= mii.meta.name %> - InfiniMii</title>
-		<meta content="<%= mii.meta.name %>" property="og:title" />
-		<meta content="<%= mii.desc %>" property="og:description" />
-		<meta content="https://miis.kestron.software/mii?id=<%= mii.id %>" property="og:url" />
-		<meta content="https://miis.kestron.software/miiImgs/<%= mii.id %>.jpg" property="og:image" />
-		<meta content="#ff0000" data-react-helmet="true" name="theme-color" />
-		<link rel="stylesheet" href="global.css">
-		<style>
-			.mii{
-				background-color:rgb(100,100,100);
-				border-radius:5px;
-				padding:10px;
-			}
-			.mii img{
-				width:20%;
-				transition:1s;
-			}
-			.tinyZoom:hover{
-				width:30%;
-				transition:0.5s;
-			}
-			.qr:hover{
-				width:40%;
-				transition:0.5s;
-			}
-			.mii .like{
-				fill: #DE4362;
-			}
-		</style>
-	</head>
-	<body>
-		<%- header %>
-		<div class="account">
-			<% if(thisUser==="default"){ %>
-				<a href="/signup">Sign Up</a> | <a href="/login">Log In</a>
-			<% } else{ %>
-				<img src="miiImgs/<%= pfp %>.jpg"> <%= thisUser %>
-				<div class="accDropdown">
-					<a href="/user?user=<%= thisUser %>">Profile</a>
-					<a href="/logout">Logout</a>
-				</div>
-			<% } %>
-		</div>
-		<div class="content">
-      <div class="left-sidebar">
-        <ul class="sidebar-list">
-          <a href="/search"><li>🔍 Search</li></a>
-          <a href="/top"><li>📈 Top Miis</li></a>
-          <a href="/best"><li>🥇 All-Time Top Miis</li></a>
-          <a href="/recent"><li>⏱️ Recent Miis</li></a>
-          <a href="/official"><li>🌟 Official Miis</li></a>
-        </ul>
-        <br>
-        <ul class="sidebar-list">
-          <a href="/upload"><li>⬆️ Upload</li></a>
-          <!--Make it the user's profile picture, remove this option if not logged in-->
-			<a href="<%= thisUser==='default'?'/signup':'/user?user='+thisUser %>"><li><img src="miiImgs/<%= pfp %>.jpg" width="18px" height="18px"> Profile</li></a>
-          <a href="/settings"><li>⚙️ Settings</li></a>
-          <a href="/convert"><li>➡️ Convert</li></a>
-          <a href="/qr"><li>📸 QR Options</li></a>
-        </ul>
-      </div>
-			<div class="mii">
-				<img src="/miiImgs/<%= mii.id %>.jpg" class="tinyZoom">
-				<img src="/miiQRs/<%= mii.id %>.jpg" class="qr">&emsp;
-				<a href="/miiWii?id=<%= mii.id %>"><img src="/wii.png" class="tinyZoom"></a>
-				<h1><%= mii.meta.name %></h1>
-				<input type="button" value="Copy Mii ID (<%= mii.id %>)" onclick="copyId()"><br>
-				<span onclick="likeMii(this,'<%= mii.id %>','<%= miiOfDay %>','<%= users[thisUser].moderator %>')">
-						<% if(!users[thisUser].votedFor.includes(mii.id)&&!users[thisUser].submissions.includes(mii.id)){ %>
-            <svg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 96 960 960" width="36px" height="36px" class="like" viewBox="0 0 24 24" fill="#000000"><path d="m480 935-41-37q-105.768-97.121-174.884-167.561Q195 660 154 604.5T96.5 504Q80 459 80 413q0-90.155 60.5-150.577Q201 202 290 202q57 0 105.5 27t84.5 78q42-54 89-79.5T670 202q89 0 149.5 60.423Q880 322.845 880 413q0 46-16.5 91T806 604.5Q765 660 695.884 730.439 626.768 800.879 521 898l-41 37Zm0-79q101.236-92.995 166.618-159.498Q712 630 750.5 580t54-89.135q15.5-39.136 15.5-77.72Q820 347 778 304.5T670.225 262q-51.524 0-95.375 31.5Q531 325 504 382h-49q-26-56-69.85-88-43.851-32-95.375-32Q224 262 182 304.5t-42 108.816Q140 452 155.5 491.5t54 90Q248 632 314 698t166 158Zm0-297Z"/></svg>
-							<% } else { %>
-							<svg class="like" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M13.35 20.13c-.76.69-1.93.69-2.69-.01l-.11-.1C5.3 15.27 1.87 12.16 2 8.28c.06-1.7.93-3.33 2.34-4.29 2.64-1.8 5.9-.96 7.66 1.1 1.76-2.06 5.02-2.91 7.66-1.1 1.41.96 2.28 2.59 2.34 4.29.14 3.88-3.3 6.99-8.55 11.76l-.1.09z"/></svg>
-							<% } %>
-							<%= mii.votes %>
-							<% if(users[thisUser].moderator||users[thisUser].submissions.includes(mii.id)){ %>
-								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 96 960 960" fill="#f00" class="trash" onclick="deleteMii('<%= mii.id %>')"><path d="M261 936q-24.75 0-42.375-17.625T201 876V306h-41v-60h188v-30h264v30h188v60h-41v570q0 24-18 42t-42 18H261Zm438-630H261v570h438V306ZM367 790h60V391h-60v399Zm166 0h60V391h-60v399ZM261 306v570-570Z"/></svg>
-							<% } else{%>
-								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="#f00" onclick="report()" class="icon"><path d="M200-120v-680h360l16 80h224v400H520l-16-80H280v280h-80Zm300-440Zm86 160h134v-240H510l-16-80H280v240h290l16 80Z"/></svg>
-							<% } %>
-							</span>
-				<% if(mii.uploader!=="Nintendo"){ %>
-				<h3>Uploaded by <a href="/user?user=<%= mii.uploader %>"><%= mii.uploader %></a> on <%= new Date(mii.uploadedOn).toLocaleString() %></h3>
-				<% } %>
-				<p>
-					<%= mii.desc %>
-				</p>
-				<p>
-					<b>Mii Info</b>
-					<br>
-					Birthday: <%= mii.general.birthMonth %>/<%= mii.general.birthday %><br>
-					Creator Name: <%= mii.meta.creatorName %>
-				</p>
-			</div>
-		</div>
+<head>
+    <title><%= mii.meta.name %> - InfiniMii</title>
+    <meta content="<%= mii.meta.name %>" property="og:title" />
+    <meta content="<%= mii.desc %>" property="og:description" />
+    <meta content="https://miis.kestron.com/mii?id=<%= mii.id %>" property="og:url" />
+    <meta content="https://miis.kestron.com/miiImgs/<%= mii.id %>.jpg" property="og:image" />
+    <meta content="#ff0000" data-react-helmet="true" name="theme-color" />
+    <link rel="stylesheet" href="global.css">
+    <link rel="stylesheet" href="miiPage.css">
+</head>
+<body>
+    <%- header %>
+    <div class="account">
+        <% if(thisUser==="default"){ %>
+            <a href="/signup">Sign Up</a> | <a href="/login">Log In</a>
+        <% } else{ %>
+            <img src="miiImgs/<%= pfp %>.jpg"> <%= thisUser %>
+            <div class="accDropdown">
+                <a href="/user?user=<%= thisUser %>">Profile</a>
+                <a href="/logout">Logout</a>
+            </div>
+        <% } %>
+    </div>
+    <div class="content">
+        <div class="left-sidebar">
+            <ul class="sidebar-list">
+                <a href="/search"><li>🔍 Search</li></a>
+                <a href="/top"><li>📈 Top Miis</li></a>
+                <a href="/best"><li>🥇 All-Time Top Miis</li></a>
+                <a href="/recent"><li>⏱️ Recent Miis</li></a>
+                <a href="/official"><li>🌟 Official Miis</li></a>
+            </ul>
+            <br>
+            <ul class="sidebar-list">
+                <a href="/upload"><li>⬆️ Upload</li></a>
+                <a href="<%= thisUser==='default'?'/signup':'/user?user='+thisUser %>"><li><img src="miiImgs/<%= pfp %>.jpg" width="18px" height="18px"> Profile</li></a>
+                <a href="/settings"><li>⚙️ Settings</li></a>
+                <a href="/convert"><li>➡️ Convert</li></a>
+                <a href="/qr"><li>📸 QR Options</li></a>
+            </ul>
+        </div>
+
+        <div class="mii-id-card">
+            <!-- Card Header -->
+            <div class="id-card-header">
+                <h2>Mii ID Card</h2>
+                <div class="card-number" onclick="copyId()">ID: <%= mii.id %></div>
+            </div>
+
+            <!-- Main Card Body -->
+            <div class="id-card-body">
+                <!-- Left side: Mii Image -->
+                <div class="id-card-photo">
+                    <img src="/miiImgs/<%= mii.id %>.jpg" alt="<%= mii.meta.name %>">
+                    <div class="qr-code">
+                        <a href="/miiQRs/<%= mii.id %>.jpg" target="_blank"><img src="/miiQRs/<%= mii.id %>.jpg" alt="QR Code"></a>
+                        <a href="/miiQRs/<%= mii.id %>.jpg" target="_blank"><span>Download for 3DS</span></a>
+                    </div>
+                </div>
+
+                <!-- Right side: Information -->
+                <div class="id-card-info">
+                    <h1 class="mii-name"><%= mii.meta.name %></h1>
+                    
+                    <div class="info-grid">
+                        <% if(mii.meta.creatorName?.length>0){ %>
+                        <div class="info-item">
+                            <span class="info-label">Creator Name</span>
+                            <span class="info-value"><%= mii.meta.creatorName %></span>
+                        </div>
+                        <% } %>
+                        
+                        <div class="info-item">
+                            <span class="info-label">Birthday</span>
+                            <span class="info-value"><%= ["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][mii.general.birthMonth] %> <%= mii.general.birthday %></span>
+                        </div>
+
+                        <% if(mii.general.height !== undefined) { %>
+                        <div class="info-item">
+                            <span class="info-label">Height</span>
+                            <span class="info-value"><%= `${height.feet}' ${height.inches}"` %></span>
+                        </div>
+                        <% } %>
+
+                        <% if(mii.general.weight !== undefined) { %>
+                        <div class="info-item">
+                            <span class="info-label">Weight [Experimental]</span>
+                            <span class="info-value"><%= Math.round(weight.pounds) %>lbs</span>
+                        </div>
+                        <% } %>
+
+                        <% if(mii.general.favoriteColor !== undefined) { %>
+                        <div class="info-item">
+                            <span class="info-label">Favorite Color</span>
+                            <span class="info-value"><%= ["Red", "Orange", "Yellow", "Lime", "Green", "Blue", "Cyan", "Pink", "Purple", "Brown", "White", "Black"][mii.general.favoriteColor] %></span>
+                        </div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Uploader Information -->
+            <div class="id-card-footer">
+                <% if(mii.uploader!=="Nintendo"){ %>
+                <div class="uploader-info">
+                    <span class="label">Uploaded by</span>
+                    <a href="/user?user=<%= mii.uploader %>"><%= mii.uploader %></a>
+                    <span class="date">on <%= new Date(mii.uploadedOn).toLocaleDateString() %></span>
+                </div>
+                <% } else { %>
+                <div class="uploader-info">
+                    <span class="official-badge">Official Nintendo Mii</span>
+                </div>
+                <% } %>
+            </div>
+
+            <!-- Description -->
+            <% if(mii.desc && mii.desc.length > 0) { %>
+            <div class="id-card-description">
+                <h3>About</h3>
+                <p><%= mii.desc %></p>
+            </div>
+            <% } %>
+
+            <!-- Actions -->
+            <div class="id-card-actions">
+                <button class="btn-primary" onclick="copyId()">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 96 960 960" width="20" fill="currentColor">
+                        <path d="M360 816q-33 0-56.5-23.5T280 736V256q0-33 23.5-56.5T360 176h360q33 0 56.5 23.5T800 256v480q0 33-23.5 56.5T720 816H360Zm0-80h360V256H360v480ZM200 976q-33 0-56.5-23.5T120 896V336h80v560h440v80H200Zm160-240V256v480Z"/>
+                    </svg>
+                    Copy Mii ID
+                </button>
+
+                <a href="/miiWii?id=<%= mii.id %>" class="btn-secondary">
+                    <img src="/wii.png" width="20" height="20">
+                    Download for Wii
+                </a>
+
+                <div class="vote-section">
+                    <span onclick="likeMii(this,'<%= mii.id %>','<%= highlightedMii %>','<%= users[thisUser].moderator %>')">
+                        <% if(!users[thisUser].votedFor.includes(mii.id)&&!users[thisUser].submissions.includes(mii.id)){ %>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="like-icon" viewBox="0 96 960 960" fill="currentColor">
+                            <path d="m480 935-41-37q-105.768-97.121-174.884-167.561Q195 660 154 604.5T96.5 504Q80 459 80 413q0-90.155 60.5-150.577Q201 202 290 202q57 0 105.5 27t84.5 78q42-54 89-79.5T670 202q89 0 149.5 60.423Q880 322.845 880 413q0 46-16.5 91T806 604.5Q765 660 695.884 730.439 626.768 800.879 521 898l-41 37Zm0-79q101.236-92.995 166.618-159.498Q712 630 750.5 580t54-89.135q15.5-39.136 15.5-77.72Q820 347 778 304.5T670.225 262q-51.524 0-95.375 31.5Q531 325 504 382h-49q-26-56-69.85-88-43.851-32-95.375-32Q224 262 182 304.5t-42 108.816Q140 452 155.5 491.5t54 90Q248 632 314 698t166 158Zm0-297Z"/>
+                        </svg>
+                        <% } else { %>
+                        <svg class="like-icon liked" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M0 0h24v24H0V0z" fill="none"/>
+                            <path d="M13.35 20.13c-.76.69-1.93.69-2.69-.01l-.11-.1C5.3 15.27 1.87 12.16 2 8.28c.06-1.7.93-3.33 2.34-4.29 2.64-1.8 5.9-.96 7.66 1.1 1.76-2.06 5.02-2.91 7.66-1.1 1.41.96 2.28 2.59 2.34 4.29.14 3.88-3.3 6.99-8.55 11.76l-.1.09z"/>
+                        </svg>
+                        <% } %>
+                        <span class="vote-count"><%= mii.votes %></span>
+                    </span>
+
+                    <% if(users[thisUser].moderator||users[thisUser].submissions.includes(mii.id)){ %>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="trash-icon" viewBox="0 96 960 960" fill="currentColor" onclick="deleteMii('<%= mii.id %>')">
+                        <path d="M261 936q-24.75 0-42.375-17.625T201 876V306h-41v-60h188v-30h264v30h188v60h-41v570q0 24-18 42t-42 18H261Zm438-630H261v570h438V306ZM367 790h60V391h-60v399Zm166 0h60V391h-60v399ZM261 306v570-570Z"/>
+                    </svg>
+                    <% } else { %>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="report-icon" viewBox="0 -960 960 960" fill="currentColor" onclick="report()">
+                        <path d="M200-120v-680h360l16 80h224v400H520l-16-80H280v280h-80Zm300-440Zm86 160h134v-240H510l-16-80H280v240h290l16 80Z"/>
+                    </svg>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+        <div class="browse-featured-miis">
+            <!--Higlighted Mii-->
+            <!--svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" version="1.1" class="crown"><path d="M896 708.757333v101.866667A106.538667 106.538667 0 0 1 789.418667 917.333333H234.581333A106.581333 106.581333 0 0 1 128 810.624v-101.866667l-82.858667-367.573333c-14.4-75.178667 47.317333-113.344 107.392-68.48l157.504 117.717333c7.722667 5.76 13.888 4.309333 18.133334-4.117333l116.394666-231.957333c31.914667-63.594667 102.976-63.530667 134.848 0l116.416 231.957333c4.266667 8.448 10.389333 9.877333 18.133334 4.117333l157.504-117.717333c60.074667-44.885333 121.813333-6.784 107.392 68.48L896 708.736zM204.8 661.333333h614.4l65.92-292.309333-120.106667 89.749333c-50.197333 37.525333-117.333333 21.824-145.450666-34.197333L512 210.24l-107.584 214.336c-28.074667 55.957333-95.232 71.722667-145.450667 34.197333l-120.064-89.728L204.778667 661.333333z m8.533333 149.290667A21.248 21.248 0 0 0 234.581333 832h554.837334A21.205333 21.205333 0 0 0 810.666667 810.624V746.666667H213.333333v63.957333z" fill=""/></svg-->
+            <div class="title-container">
+                <h2>Highlighted Mii</h2>
+                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAScAAAAyCAYAAAAeNh3dAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYxIDY0LjE0MDk0OSwgMjAxMC8xMi8wNy0xMDo1NzowMSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNS4xIE1hY2ludG9zaCIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDowN0Q4NEI4MEYyRjUxMUUyQkIyQzgyMzFDMDNCRTc0OSIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDowN0Q4NEI4MUYyRjUxMUUyQkIyQzgyMzFDMDNCRTc0OSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkM5RDJFRTU3RjBCRjExRTJCQjJDODIzMUMwM0JFNzQ5IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkM5RDJFRTU4RjBCRjExRTJCQjJDODIzMUMwM0JFNzQ5Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+wjmikgAABsNJREFUeNrsnb9v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" height='20' width='205' />
+            </div>
+            <div class="mii-card">
+                <% if(users[thisUser].moderator){ %>
+                    <input type="text" placeholder="New Highlighted Mii ID?" id="highlightedMiiID"> <input type="button" onclick="highlightedMiiChange()" value="Change Highlighted Mii">
+                <% } %>
+                <a href='/mii?id=<%= highlightedMii %>'><img src="miiImgs/<%= highlightedMii %>.jpg"></a>
+                <div class="flex">
+                    <div>
+                        <h3><%= miis[highlightedMii].meta.name %></h3>
+                        <a><%= miis[highlightedMii].uploader %></a>
+                    </div>
+                    <% if(!users[thisUser].votedFor.includes(highlightedMii)&&!users[thisUser].submissions.includes(highlightedMii)){ %>
+                        <svg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 96 960 960" width="36px" height="36px" class="like" viewBox="0 0 24 24" fill="#000000"><path d="m480 935-41-37q-105.768-97.121-174.884-167.561Q195 660 154 604.5T96.5 504Q80 459 80 413q0-90.155 60.5-150.577Q201 202 290 202q57 0 105.5 27t84.5 78q42-54 89-79.5T670 202q89 0 149.5 60.423Q880 322.845 880 413q0 46-16.5 91T806 604.5Q765 660 695.884 730.439 626.768 800.879 521 898l-41 37Zm0-79q101.236-92.995 166.618-159.498Q712 630 750.5 580t54-89.135q15.5-39.136 15.5-77.72Q820 347 778 304.5T670.225 262q-51.524 0-95.375 31.5Q531 325 504 382h-49q-26-56-69.85-88-43.851-32-95.375-32Q224 262 182 304.5t-42 108.816Q140 452 155.5 491.5t54 90Q248 632 314 698t166 158Zm0-297Z"/></svg>
+                    <% } else { %>
+                        <svg class="like" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M13.35 20.13c-.76.69-1.93.69-2.69-.01l-.11-.1C5.3 15.27 1.87 12.16 2 8.28c.06-1.7.93-3.33 2.34-4.29 2.64-1.8 5.9-.96 7.66 1.1 1.76-2.06 5.02-2.91 7.66-1.1 1.41.96 2.28 2.59 2.34 4.29.14 3.88-3.3 6.99-8.55 11.76l-.1.09z"/></svg>
+                    <% } %>
+                </div>
+                <p><%= miis[highlightedMii].desc.length>75?miis[highlightedMii].desc.slice(0,73)+"...":miis[highlightedMii].desc %></p>
+            </div>
+            <br>
+            <!-- Average Mii -->
+            <div class="title-container">
+                <h2>Average Mii</h2>
+                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAScAAAAyCAYAAAAeNh3dAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYxIDY0LjE0MDk0OSwgMjAxMC8xMi8wNy0xMDo1NzowMSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNS4xIE1hY2ludG9zaCIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDowN0Q4NEI4MEYyRjUxMUUyQkIyQzgyMzFDMDNCRTc0OSIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDowN0Q4NEI4MUYyRjUxMUUyQkIyQzgyMzFDMDNCRTc0OSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkM5RDJFRTU3RjBCRjExRTJCQjJDODIzMUMwM0JFNzQ5IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkM5RDJFRTU4RjBCRjExRTJCQjJDODIzMUMwM0JFNzQ5Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+wjmikgAABsNJREFUeNrsnb9v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" height='20' width='205' />
+            </div>
+            <div class="mii-card">
+                <a href='/mii?id=average'><img src="miiImgs/average.jpg"></a>
+                <div class="flex">
+                    <div>
+                        <h3><%= averageMii.general.gender>0?"Jane":"John" %> Doe</h3>
+                        <a>Everyone</a>
+                    </div>
+                </div>
+                <p>The most common or average features and placements of those features across all Miis on the website</p>
+            </div>
+        </div>
+    </div>
+    
     <footer>
-      <ul>
-        <li><a href="mailto:kestron@kestron.software">Contact</a></li>
-        <!-- <li><a href="/support">Support</a></li> -->
-        <li><a href="/donate">Donate</a></li>
-        <li><a href='https://discord.gg/k3yVkrrvez'>Discord</a></li>
-      </ul>
- 	  </footer>
-		<script src="global.js"></script>
-		<script>
-			function copyId(){
-				navigator.clipboard.writeText("<%= mii.id %>");
-			}
-			function report(){
-				var what=prompt("What would you like to report this Mii for?");
-				fetch("/reportMii?id=<%= mii.id %>&what="+encodeURIComponent(what));
-			}
-		</script>
-	</body>
+        <ul>
+            <li><a href="mailto:kestron@kestron.com">Contact</a></li>
+            <li><a href="/donate">Donate</a></li>
+            <li><a href='https://discord.gg/k3yVkrrvez'>Discord</a></li>
+        </ul>
+    </footer>
+    
+    <script src="global.js"></script>
+    <script>
+        function copyId(){
+            navigator.clipboard.writeText("<%= mii.id %>");
+        }
+        function report(){
+            var what=prompt("What would you like to report this Mii for?");
+            fetch("/reportMii?id=<%= mii.id %>&what="+encodeURIComponent(what));
+        }
+    </script>
+</body>
 </html>

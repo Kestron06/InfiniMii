@@ -1,0 +1,89 @@
+.miiCategory{
+    padding: 2rem;
+    border-radius: 20px;
+    width: 100%;
+    margin: 0px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    border-style:solid;
+    border-color:#202020;
+}
+
+.miiCategory a{
+    color:white;
+    text-decoration:none;
+    transition:1s;
+}
+.miiCategory a:hover{
+    color:white;
+    text-decoration:underline;
+    transition:750ms;
+}
+
+.miiCategory h1{
+    width: 100%;
+    margin: 0 0 1rem 0;
+}
+
+.miiThumb{
+    background-color: #252525;
+    padding: 1rem;
+    border-radius: 20px;
+    width: calc(20% - 1rem); /* 5 items per row with gap */
+    text-align: center;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.miiThumb img{
+    width: 100%;
+    height: auto;
+    flex-grow: 1;
+    object-fit: contain;
+    margin-bottom: 0.5rem;
+    transition:1s;
+}
+
+.miiThumb img:hover{
+    transition: 750ms cubic-bezier(.46,.22,.14,1.34);
+    transform: scale(1.25);
+    transform-origin: bottom;
+}
+
+.miiThumb h3{
+    margin: 0;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    hyphens: auto;
+    min-width: 10ch; /* Guarantee space for 10 characters */
+    font-size: clamp(0.8rem, 1.5vw, 1.2rem); /* Responsive font size */
+    line-height: 1.2;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 1200px) {
+    .miiThumb {
+        width: calc(25% - 1rem); /* 4 items per row */
+    }
+}
+
+@media (max-width: 900px) {
+    .miiThumb {
+        width: calc(33.333% - 1rem); /* 3 items per row */
+    }
+}
+
+@media (max-width: 600px) {
+    .miiThumb {
+        width: calc(50% - 1rem); /* 2 items per row */
+    }
+}
+
+@media (max-width: 400px) {
+    .miiThumb {
+        width: 100%; /* 1 item per row */
+    }
+}

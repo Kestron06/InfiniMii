@@ -1,0 +1,250 @@
+/* Utility Pages CSS - For Convert, QR, Search, Settings, and Upload pages */
+
+/* Main container for utility pages */
+.utility-container,
+.upload,
+.qr,
+.convert {
+    background-color: var(--layer-2);
+    border: 2px solid #202020;
+    border-radius: 25px;
+    padding: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* Fieldset styling */
+fieldset {
+    border: 2px solid var(--brand-color);
+    border-radius: 15px;
+    padding: 2rem;
+    background-color: rgba(0, 0, 0, 0.2);
+    margin: 0;
+}
+
+legend {
+    color: var(--brand-color);
+    font-size: 24px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0 1rem;
+}
+
+/* Notes and help text */
+h6,
+.note {
+    color: var(--text-2);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+    margin: 1rem 0 0 0;
+}
+
+h6 b,
+.note b {
+    color: var(--brand-color);
+}
+
+/* QR Scanner specific styles */
+.qr #loadingMessage {
+    text-align: center;
+    padding: 40px;
+    background-color: var(--layer-3);
+    border-radius: 15px;
+    color: var(--text-1);
+    font-size: 18px;
+}
+
+.qr #canvas {
+    width: 100%;
+    border-radius: 15px;
+    margin: 1rem 0;
+}
+
+.qr #output {
+    margin-top: 20px;
+    background: var(--layer-3);
+    padding: 15px;
+    border-radius: 10px;
+}
+
+.qr #output div {
+    padding-bottom: 10px;
+    word-wrap: break-word;
+    color: var(--text-1);
+}
+
+.qr #noQRFound,
+.qr #outputMessage {
+    text-align: center;
+    color: var(--text-2);
+}
+
+/* Action buttons container */
+.after {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+
+.after[hidden] {
+    display: none;
+}
+
+/* Settings page specific */
+.settings-section {
+    margin-bottom: 2rem;
+}
+
+.settings-section:last-child {
+    margin-bottom: 0;
+}
+
+.settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.settings-group input {
+    margin: 0;
+}
+
+.danger-zone {
+    border-color: #f00;
+    background-color: rgba(255, 0, 0, 0.1);
+    margin-top: 2rem;
+}
+
+.danger-zone legend {
+    color: #f00;
+}
+
+.danger-zone input[type="button"] {
+    background-color: #f00;
+}
+
+.danger-zone input[type="button"]:hover {
+    background-color: #cc0000;
+}
+
+/* Upload page specific */
+.upload-instructions {
+    background-color: var(--layer-3);
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+}
+
+.upload-instructions h3 {
+    margin: 0 0 1rem 0;
+    color: var(--brand-color);
+    font-size: 20px;
+}
+
+.upload-instructions ul {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: var(--text-2);
+}
+
+.upload-instructions li {
+    margin-bottom: 0.5rem;
+}
+
+/* Radio button group styling */
+.radio-group {
+    display: flex;
+    gap: 2rem;
+    margin: 1rem 0;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Search page specific */
+.search-container {
+    text-align: center;
+}
+
+.search-container input[type="text"] {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.search-container input[type="submit"] {
+    display: inline-block;
+    margin-top: 1rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .utility-container,
+    .upload,
+    .qr,
+    .convert {
+        padding: 1.5rem;
+        border-radius: 15px;
+    }
+
+    fieldset {
+        padding: 1.5rem;
+    }
+
+    legend {
+        font-size: 20px;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="email"],
+    input[type="file"],
+    select,
+    textarea {
+        font-size: 14px;
+    }
+
+    .radio-group {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .after {
+        flex-direction: column;
+    }
+
+    .after input[type="button"] {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .utility-container,
+    .upload,
+    .qr,
+    .convert {
+        padding: 1rem;
+    }
+
+    fieldset {
+        padding: 1rem;
+    }
+
+    legend {
+        font-size: 18px;
+    }
+
+    input[type="submit"],
+    input[type="button"],
+    button {
+        width: 100%;
+        margin: 0.5rem 0;
+    }
+}

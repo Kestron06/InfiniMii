@@ -6,7 +6,7 @@ var header = `
 var footer = `
 	<footer>
     <ul>
-      <li><a href="mailto:kestron@kestron.software">Contact</a></li>
+      <li><a href="mailto:kestron@kestron.com">Contact</a></li>
       <li><a>Support</a></li>
       <li><a>Donate</a></li>
       <li><a href='https://discord.gg/k3yVkrrvez'>Discord</a></li>

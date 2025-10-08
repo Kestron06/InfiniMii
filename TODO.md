@@ -38,7 +38,6 @@
    - 3DS/Wii U, through QR Codes - uploading from the 3DS/Wii U, scanning from another device using the 3DS/Wii U
    - Switch/2 - Recreation, Amiibos using 3DS with Amiibo reader, New 3DS, or Wii U
    - DS - Recreation akin to a Wii
- - Rename Mii of the Day to Highlighted Mii
  - Distinguish Uploaded and Published Miis
    - Able to upload Miis that are saved for you privately
       - Allow up to a certain number of these per user, things like family and friends you want saved between consoles without being public  
