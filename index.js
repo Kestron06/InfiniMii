@@ -13,6 +13,145 @@ var upload = multer({ dest: 'uploads/' });
 var globalSalt = process.env.salt;
 process.env=require("./env.json");
 
+// Role System - Array-based for multiple roles
+const ROLES = {
+    TEMP_BANNED: 'tempBanned',
+    PERM_BANNED: 'permBanned', 
+    BASIC: 'basic',
+    SUPPORTER: 'supporter',
+    RESEARCHER: 'researcher',
+    MODERATOR: 'moderator',
+    ADMINISTRATOR: 'administrator'
+};
+
+const ROLE_LEVELS = {
+    [ROLES.TEMP_BANNED]: 0,
+    [ROLES.PERM_BANNED]: 0,
+    [ROLES.BASIC]: 1,
+    [ROLES.SUPPORTER]: 2,
+    [ROLES.RESEARCHER]: 3,
+    [ROLES.MODERATOR]: 4,
+    [ROLES.ADMINISTRATOR]: 5
+};
+
+const ROLE_DISPLAY = {
+    [ROLES.TEMP_BANNED]: '🚫 Temporarily Banned',
+    [ROLES.PERM_BANNED]: '⛔ Permanently Banned',
+    [ROLES.BASIC]: 'User',
+    [ROLES.SUPPORTER]: '💖 Supporter',
+    [ROLES.RESEARCHER]: '🔬 Researcher',
+    [ROLES.MODERATOR]: '🛡️ Moderator',
+    [ROLES.ADMINISTRATOR]: '👑 Administrator'
+};
+
+// Helper functions for role system
+function getUserRoles(user) {
+    if (Array.isArray(user.roles)) {
+        return user.roles;
+    }
+    return [ROLES.BASIC];
+}
+
+function hasRole(user, role) {
+    const roles = getUserRoles(user);
+    return roles.includes(role);
+}
+
+function hasAnyRole(user, roleArray) {
+    const userRoles = getUserRoles(user);
+    return roleArray.some(role => userRoles.includes(role));
+}
+
+function getHighestRoleLevel(user) {
+    const roles = getUserRoles(user);
+    return Math.max(...roles.map(role => ROLE_LEVELS[role] || 0));
+}
+
+function hasPermission(user, requiredRole) {
+    return getHighestRoleLevel(user) >= ROLE_LEVELS[requiredRole];
+}
+
+function canUploadOfficial(user) {
+    return hasRole(user, ROLES.RESEARCHER) || 
+           hasRole(user, ROLES.ADMINISTRATOR);
+}
+
+function canModerate(user) {
+    return hasRole(user, ROLES.MODERATOR) || 
+           hasRole(user, ROLES.ADMINISTRATOR);
+}
+
+function isAdmin(user) {
+    return hasRole(user, ROLES.ADMINISTRATOR);
+}
+
+function isBanned(user) {
+    const roles = getUserRoles(user);
+    if (roles.includes(ROLES.PERM_BANNED)) return true;
+    if (roles.includes(ROLES.TEMP_BANNED)) {
+        if (user.banExpires && Date.now() < user.banExpires) {
+            return true;
+        } else if (user.banExpires) {
+            // Unban user - remove temp ban role
+            user.roles = user.roles.filter(r => r !== ROLES.TEMP_BANNED);
+            delete user.banExpires;
+            save();
+            return false;
+        }
+        return true;
+    }
+    return false;
+}
+
+function addRole(user, role) {
+    if (!user.roles) {
+        user.roles = [ROLES.BASIC];
+    }
+    if (!user.roles.includes(role)) {
+        user.roles.push(role);
+    }
+    // Update legacy moderator flag
+    user.roles.includes('moderator') = canModerate(user);
+}
+
+function removeRole(user, role) {
+    if (!user.roles) {
+        user.roles = [ROLES.BASIC];
+    }
+    user.roles = user.roles.filter(r => r !== role);
+    if (user.roles.length === 0) {
+        user.roles = [ROLES.BASIC];
+    }
+    // Update legacy moderator flag
+    user.roles.includes('moderator') = canModerate(user);
+}
+
+function setRoles(user, rolesArray) {
+    user.roles = Array.isArray(rolesArray) ? rolesArray : [rolesArray];
+    if (user.roles.length === 0) {
+        user.roles = [ROLES.BASIC];
+    }
+    // Update legacy moderator flag
+    user.moderator = canModerate(user);
+}
+
+function hashIP(ip) {
+    return crypto.createHash('sha256').update(ip + globalSalt).digest('hex');
+}
+
+function isVPN(ip) {
+    // Basic check - you might want to use a VPN detection API
+    // For now, just check if it's a common VPN pattern
+    // This is a placeholder - implement proper VPN detection if needed
+    return false; // TODO: Implement VPN detection
+}
+
+// Initialize banned IPs storage if it doesn't exist
+if (!storage.bannedIPs) {
+    storage.bannedIPs = [];
+    save();
+}
+
 const header=`<header>
 				<a href="/"><img src='banner.png' id="banner"></a>
 			</header>`;
@@ -332,10 +471,42 @@ function getAverageMii(){
 
 
 const site = new express();
+site.use(express.json());
 site.use(express.urlencoded({ extended: true }));
 site.use(express.static(path.join(__dirname + '/static')));
 site.use(cookieParser());
 site.use('/favicon.ico', express.static('static/favicon.png'));
+site.use((req, res, next) => {
+    // Check if user is banned
+    if (req.cookies.username && storage.users[req.cookies.username]) {
+        const user = storage.users[req.cookies.username];
+        
+        // Check IP ban
+        const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        const ipHash = hashIP(clientIP);
+        if (storage.bannedIPs.includes(ipHash)) {
+            res.clearCookie('username');
+            res.clearCookie('token');
+            return res.send('Your IP address has been permanently banned.');
+        }
+        
+        // Check user ban
+        if (isBanned(user)) {
+            // Allow access to logout only
+            if (req.path === '/logout') {
+                return next();
+            }
+            
+            if (user.role === ROLES.TEMP_BANNED && user.banExpires) {
+                const timeLeft = Math.ceil((user.banExpires - Date.now()) / (1000 * 60 * 60));
+                return res.send(`You are temporarily banned. Time remaining: ${timeLeft} hours. Reason: ${user.banReason || 'No reason provided'}`);
+            } else {
+                return res.send(`You are permanently banned. Reason: ${user.banReason || 'No reason provided'}`);
+            }
+        }
+    }
+    next();
+});
 
 site.listen(8080, async () => {
     // - All actions here should be finished before we say Online, so as to help limit chances for data corruption, so tasks will be made synchronous even where they need not be -
@@ -607,7 +778,7 @@ site.get('/deleteMii', (req, res) => {
             res.send("{'okay':false}");
             return;
         }
-        if (storage.users[req.cookies.username].submissions.includes(req.query.id) || storage.users[req.cookies.username].moderator) {
+        if (storage.users[req.cookies.username].submissions.includes(req.query.id) || storage.users[req.cookies.username].roles.includes('moderator')) {
             var mii = storage.miis[req.query.id];
             storage.users[mii.uploader].submissions.splice(storage.users[mii.uploader].submissions.indexOf(mii.id), 1);
             var d = new Date();
@@ -658,6 +829,737 @@ site.get('/deleteMii', (req, res) => {
     catch (e) {
         console.log(e);
         res.send("{'okay':false}");
+    }
+});
+// Update Mii Field (Moderator only)
+site.post('/updateMiiField', async (req, res) => {
+    try {
+        // Verify moderator
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        if (!storage.users[req.cookies.username].roles.includes('moderator')) {
+            return res.json({ okay: false, error: 'Not authorized' });
+        }
+
+        const { id, field, value } = req.body;
+
+        if (!id || !field || value === undefined) {
+            return res.json({ okay: false, error: 'Missing parameters' });
+        }
+
+        const mii = storage.miis[id];
+        if (!mii) {
+            return res.json({ okay: false, error: 'Mii not found' });
+        }
+
+        // Store old value for logging
+        let oldValue;
+
+        // Update the appropriate field
+        switch (field) {
+            case 'name':
+                oldValue = mii.meta.name;
+                mii.meta.name = value;
+                break;
+            case 'desc':
+                oldValue = mii.desc;
+                mii.desc = value;
+                break;
+            case 'creatorName':
+                oldValue = mii.meta.creatorName;
+                mii.meta.creatorName = value;
+                break;
+            case 'uploader':
+                // Validate new uploader exists
+                if (!storage.users[value]) {
+                    return res.json({ okay: false, error: 'User does not exist' });
+                }
+                
+                oldValue = mii.uploader;
+                
+                // Remove from old uploader's submissions
+                const oldUploaderSubmissions = storage.users[mii.uploader].submissions;
+                const index = oldUploaderSubmissions.indexOf(id);
+                if (index > -1) {
+                    oldUploaderSubmissions.splice(index, 1);
+                }
+                
+                // Add to new uploader's submissions
+                if (!storage.users[value].submissions.includes(id)) {
+                    storage.users[value].submissions.push(id);
+                }
+                mii.uploader = value;
+                break;
+            default:
+                return res.json({ okay: false, error: 'Invalid field' });
+        }
+
+        save();
+
+        // Log to Discord
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: `🛠️ Mii ${field} Updated`,
+                description: `Moderator ${req.cookies.username} updated ${field}`,
+                color: 0xFFA500,
+                fields: [
+                    {
+                        name: 'Mii',
+                        value: `[${mii.meta.name}](https://miis.kestron.com/mii?id=${id})`,
+                        inline: true
+                    },
+                    {
+                        name: 'Field',
+                        value: field,
+                        inline: true
+                    },
+                    {
+                        name: 'Old Value',
+                        value: oldValue || 'N/A',
+                        inline: false
+                    },
+                    {
+                        name: 'New Value',
+                        value: value,
+                        inline: false
+                    }
+                ],
+                thumbnail: {
+                    url: `https://miis.kestron.com/miiImgs/${id}.jpg`
+                }
+            }]
+        }));
+
+        res.json({ okay: true });
+    } catch (e) {
+        console.error('Error updating Mii field:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+// Regenerate QR Code (Moderator only)
+site.get('/regenerateQR', async (req, res) => {
+    try {
+        // Verify moderator
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        if (!storage.users[req.cookies.username].roles.includes('moderator')) {
+            return res.json({ okay: false, error: 'Not authorized' });
+        }
+
+        const { id } = req.query;
+        const mii = storage.miis[id];
+
+        if (!mii) {
+            return res.json({ okay: false, error: 'Mii not found' });
+        }
+
+        // Regenerate the QR code
+        await miijs.write3DSQR(mii, `./static/miiQRs/${id}.jpg`);
+
+        // Log to Discord
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '🔄 QR Code Regenerated',
+                description: `Moderator ${req.cookies.username} regenerated QR code`,
+                color: 0x00AFF0,
+                fields: [
+                    {
+                        name: 'Mii',
+                        value: `[${mii.meta.name}](https://miis.kestron.com/mii?id=${id})`,
+                        inline: true
+                    }
+                ],
+                thumbnail: {
+                    url: `https://miis.kestron.com/miiImgs/${id}.jpg`
+                }
+            }]
+        }));
+
+        res.json({ okay: true });
+    } catch (e) {
+        console.error('Error regenerating QR:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+// Add Role to User (Admin only)
+site.post('/addUserRole', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!isAdmin(currentUser)) {
+            return res.json({ okay: false, error: 'Only administrators can manage roles' });
+        }
+
+        const { username, role } = req.body;
+        const targetUser = storage.users[username];
+
+        if (!targetUser) {
+            return res.json({ okay: false, error: 'User not found' });
+        }
+
+        if (!Object.values(ROLES).includes(role)) {
+            return res.json({ okay: false, error: 'Invalid role' });
+        }
+
+        addRole(targetUser, role);
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '➕ Role Added to User',
+                description: `Administrator ${req.cookies.username} added a role`,
+                color: 0x00FF00,
+                fields: [
+                    {
+                        name: 'User',
+                        value: username,
+                        inline: true
+                    },
+                    {
+                        name: 'Role Added',
+                        value: ROLE_DISPLAY[role],
+                        inline: true
+                    },
+                    {
+                        name: 'Current Roles',
+                        value: getUserRoles(targetUser).map(r => ROLE_DISPLAY[r]).join(', '),
+                        inline: false
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true, roles: targetUser.roles });
+    } catch (e) {
+        console.error('Error adding user role:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+
+// Remove Role from User (Admin only)
+site.post('/removeUserRole', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!isAdmin(currentUser)) {
+            return res.json({ okay: false, error: 'Only administrators can manage roles' });
+        }
+
+        const { username, role } = req.body;
+        const targetUser = storage.users[username];
+
+        if (!targetUser) {
+            return res.json({ okay: false, error: 'User not found' });
+        }
+
+        removeRole(targetUser, role);
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '➖ Role Removed from User',
+                description: `Administrator ${req.cookies.username} removed a role`,
+                color: 0xFF9900,
+                fields: [
+                    {
+                        name: 'User',
+                        value: username,
+                        inline: true
+                    },
+                    {
+                        name: 'Role Removed',
+                        value: ROLE_DISPLAY[role],
+                        inline: true
+                    },
+                    {
+                        name: 'Current Roles',
+                        value: getUserRoles(targetUser).map(r => ROLE_DISPLAY[r]).join(', '),
+                        inline: false
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true, roles: targetUser.roles });
+    } catch (e) {
+        console.error('Error removing user role:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+
+// Temporary Ban User (Moderator+)
+site.post('/tempBanUser', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!canModerate(currentUser)) {
+            return res.json({ okay: false, error: 'Insufficient permissions' });
+        }
+
+        const { username, hours, reason } = req.body;
+        const targetUser = storage.users[username];
+
+        if (!targetUser) {
+            return res.json({ okay: false, error: 'User not found' });
+        }
+
+        // Moderators can't ban admins or other moderators
+        if (!isAdmin(currentUser) && canModerate(targetUser)) {
+            return res.json({ okay: false, error: 'Cannot ban moderators or administrators' });
+        }
+
+        addRole(targetUser, ROLES.TEMP_BANNED);
+        targetUser.banExpires = Date.now() + (hours * 60 * 60 * 1000);
+        targetUser.banReason = reason;
+
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '⏰ User Temporarily Banned',
+                description: `${req.cookies.username} temporarily banned a user`,
+                color: 0xFF9900,
+                fields: [
+                    {
+                        name: 'User',
+                        value: username,
+                        inline: true
+                    },
+                    {
+                        name: 'Duration',
+                        value: `${hours} hours`,
+                        inline: true
+                    },
+                    {
+                        name: 'Reason',
+                        value: reason || 'No reason provided',
+                        inline: false
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true });
+    } catch (e) {
+        console.error('Error temp banning user:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+
+// Permanent Ban User (Admin only)
+site.post('/permBanUser', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!isAdmin(currentUser)) {
+            return res.json({ okay: false, error: 'Only administrators can permanently ban users' });
+        }
+
+        const { username, reason } = req.body;
+        const targetUser = storage.users[username];
+
+        if (!targetUser) {
+            return res.json({ okay: false, error: 'User not found' });
+        }
+
+        const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        
+        // Ban IP if not VPN
+        if (!isVPN(clientIP)) {
+            const ipHash = hashIP(clientIP);
+            if (!storage.bannedIPs.includes(ipHash)) {
+                storage.bannedIPs.push(ipHash);
+            }
+        }
+
+        // Delete all user's Miis
+        const miiIds = [...targetUser.submissions];
+        for (const miiId of miiIds) {
+            try {
+                const mii = storage.miis[miiId];
+                if (mii) {
+                    // Remove from miiIds
+                    const index = storage.miiIds.indexOf(miiId);
+                    if (index > -1) storage.miiIds.splice(index, 1);
+                    
+                    // Delete files
+                    try { fs.unlinkSync(`./static/miiImgs/${miiId}.jpg`); } catch(e) {}
+                    try { fs.unlinkSync(`./static/miiQRs/${miiId}.jpg`); } catch(e) {}
+                    
+                    // Delete Mii data
+                    delete storage.miis[miiId];
+                }
+            } catch(e) {
+                console.error(`Error deleting Mii ${miiId}:`, e);
+            }
+        }
+
+        // Delete user account
+        delete storage.users[username];
+
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '⛔ User Permanently Banned',
+                description: `${req.cookies.username} permanently banned a user`,
+                color: 0xFF0000,
+                fields: [
+                    {
+                        name: 'User',
+                        value: username,
+                        inline: true
+                    },
+                    {
+                        name: 'Miis Deleted',
+                        value: miiIds.length.toString(),
+                        inline: true
+                    },
+                    {
+                        name: 'IP Banned',
+                        value: !isVPN(clientIP) ? 'Yes' : 'No (VPN detected)',
+                        inline: true
+                    },
+                    {
+                        name: 'Reason',
+                        value: reason || 'No reason provided',
+                        inline: false
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true });
+    } catch (e) {
+        console.error('Error perm banning user:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+
+// Delete All User Miis (Moderator+)
+site.post('/deleteAllUserMiis', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!canModerate(currentUser)) {
+            return res.json({ okay: false, error: 'Insufficient permissions' });
+        }
+
+        const { username } = req.body;
+        const targetUser = storage.users[username];
+
+        if (!targetUser) {
+            return res.json({ okay: false, error: 'User not found' });
+        }
+
+        const miiIds = [...targetUser.submissions];
+        let deletedCount = 0;
+
+        for (const miiId of miiIds) {
+            try {
+                const mii = storage.miis[miiId];
+                if (mii) {
+                    // Remove from miiIds
+                    const index = storage.miiIds.indexOf(miiId);
+                    if (index > -1) storage.miiIds.splice(index, 1);
+                    
+                    // Delete files
+                    try { fs.unlinkSync(`./static/miiImgs/${miiId}.jpg`); } catch(e) {}
+                    try { fs.unlinkSync(`./static/miiQRs/${miiId}.jpg`); } catch(e) {}
+                    
+                    // Delete Mii data
+                    delete storage.miis[miiId];
+                    deletedCount++;
+                }
+            } catch(e) {
+                console.error(`Error deleting Mii ${miiId}:`, e);
+            }
+        }
+
+        targetUser.submissions = [];
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '🗑️ All User Miis Deleted',
+                description: `${req.cookies.username} deleted all Miis from user ${username}`,
+                color: 0xFF6600,
+                fields: [
+                    {
+                        name: 'User',
+                        value: username,
+                        inline: true
+                    },
+                    {
+                        name: 'Miis Deleted',
+                        value: deletedCount.toString(),
+                        inline: true
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true, deletedCount });
+    } catch (e) {
+        console.error('Error deleting all user Miis:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+
+// Change Username (Moderator+)
+site.post('/changeUsername', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!canModerate(currentUser)) {
+            return res.json({ okay: false, error: 'Insufficient permissions' });
+        }
+
+        const { oldUsername, newUsername } = req.body;
+
+        if (!validate(newUsername)) {
+            return res.json({ okay: false, error: 'Invalid username format' });
+        }
+
+        if (storage.users[newUsername]) {
+            return res.json({ okay: false, error: 'Username already taken' });
+        }
+
+        const user = storage.users[oldUsername];
+        if (!user) {
+            return res.json({ okay: false, error: 'User not found' });
+        }
+
+        // Update username in storage
+        storage.users[newUsername] = user;
+        delete storage.users[oldUsername];
+
+        // Update uploader field in all user's Miis
+        user.submissions.forEach(miiId => {
+            if (storage.miis[miiId]) {
+                storage.miis[miiId].uploader = newUsername;
+            }
+        });
+
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '✏️ Username Changed',
+                description: `${req.cookies.username} changed a username`,
+                color: 0x00FF00,
+                fields: [
+                    {
+                        name: 'Old Username',
+                        value: oldUsername,
+                        inline: true
+                    },
+                    {
+                        name: 'New Username',
+                        value: newUsername,
+                        inline: true
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true });
+    } catch (e) {
+        console.error('Error changing username:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+
+// Toggle Mii Official Status (Moderator+)
+site.post('/toggleMiiOfficial', async (req, res) => {
+    try {
+        // Verify moderator
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!canModerate(currentUser)) {
+            return res.json({ okay: false, error: 'Not authorized' });
+        }
+
+        const { id, official } = req.body;
+
+        if (!id || official === undefined) {
+            return res.json({ okay: false, error: 'Missing parameters' });
+        }
+
+        const mii = storage.miis[id];
+        if (!mii) {
+            return res.json({ okay: false, error: 'Mii not found' });
+        }
+
+        const oldStatus = mii.official;
+        mii.official = official;
+
+        save();
+
+        // Log to Discord
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: official ? '⭐ Mii Marked as Official' : '❌ Mii Unmarked as Official',
+                description: `Moderator ${req.cookies.username} changed official status`,
+                color: official ? 0xFFD700 : 0x808080,
+                fields: [
+                    {
+                        name: 'Mii',
+                        value: `[${mii.meta.name}](https://miis.kestron.com/mii?id=${id})`,
+                        inline: true
+                    },
+                    {
+                        name: 'Old Status',
+                        value: oldStatus ? 'Official' : 'Not Official',
+                        inline: true
+                    },
+                    {
+                        name: 'New Status',
+                        value: official ? 'Official' : 'Not Official',
+                        inline: true
+                    }
+                ],
+                thumbnail: {
+                    url: `https://miis.kestron.com/miiImgs/${id}.jpg`
+                }
+            }]
+        }));
+
+        res.json({ okay: true });
+    } catch (e) {
+        console.error('Error toggling official status:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+
+// Change User PFP (Moderator+)
+site.post('/changeUserPfp', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!canModerate(currentUser)) {
+            return res.json({ okay: false, error: 'Insufficient permissions' });
+        }
+
+        const { username, miiId } = req.body;
+        const targetUser = storage.users[username];
+
+        if (!targetUser) {
+            return res.json({ okay: false, error: 'User not found' });
+        }
+
+        if (!storage.miis[miiId]) {
+            return res.json({ okay: false, error: 'Mii not found' });
+        }
+
+        targetUser.miiPfp = miiId;
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '🖼️ User PFP Changed',
+                description: `${req.cookies.username} changed profile picture for ${username}`,
+                color: 0x00CCFF,
+                fields: [
+                    {
+                        name: 'User',
+                        value: username,
+                        inline: true
+                    },
+                    {
+                        name: 'New PFP Mii ID',
+                        value: miiId,
+                        inline: true
+                    }
+                ],
+                thumbnail: {
+                    url: `https://miis.kestron.com/miiImgs/${miiId}.jpg`
+                }
+            }]
+        }));
+
+        res.json({ okay: true });
+    } catch (e) {
+        console.error('Error changing user PFP:', e);
+        res.json({ okay: false, error: 'Server error' });
     }
 });
 site.get('/voteMii', (req, res) => {
@@ -778,7 +1680,9 @@ site.get('/settings', (req, res) => {
         res.redirect("/");
         return;
     }
-    ejs.renderFile('./ejsFiles/settings.ejs', Object.assign({}, storage, { thisUser: req.cookies.username, pfp: storage.users[req.cookies.username].miiPfp}, {header:header,footer:footer}), {}, function(err, str) {
+    var toSend=Object.assign({}, storage, { thisUser: req.cookies.username, pfp: storage.users[req.cookies.username].miiPfp}, {header:header,footer:footer});
+    toSend.highlightedMii=storage.miis[storage.highlightedMii];
+    ejs.renderFile('./ejsFiles/settings.ejs', toSend, {}, function(err, str) {
         if (err) {
             res.send(err);
             console.log(err);
@@ -839,7 +1743,7 @@ site.get('/changeUser', (req, res) => {
     }
 });
 site.get('/changehighlightedMii', (req, res) => {
-    if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token) || !storage.users[req.cookies.username].moderator) {
+    if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token) || !storage.users[req.cookies.username].roles.includes('moderator')) {
         res.send(`{"okay":false,"msg":"Invalid account"}`);
         return;
     }
@@ -941,6 +1845,262 @@ site.get('/miiWii',async (req,res)=>{
     res.setHeader('Content-Type', 'application/octet-stream');
     res.send(miiBuffer);
 });
+// Change Email (User)
+site.post('/changeEmail', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, msg: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, msg: 'Invalid token' });
+        }
+
+        const { oldEmail, newEmail } = req.body;
+        const user = storage.users[req.cookies.username];
+
+        // Verify old email matches
+        if (user.email !== oldEmail) {
+            return res.json({ okay: false, msg: 'Old email does not match' });
+        }
+
+        // Basic email validation
+        if (!newEmail || !newEmail.includes('@') || !newEmail.includes('.')) {
+            return res.json({ okay: false, msg: 'Invalid email format' });
+        }
+
+        user.email = newEmail;
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '📧 Email Changed',
+                description: `User ${req.cookies.username} changed their email`,
+                color: 0x00CCFF,
+                fields: [
+                    {
+                        name: 'User',
+                        value: req.cookies.username,
+                        inline: true
+                    },
+                    {
+                        name: 'New Email',
+                        value: newEmail,
+                        inline: true
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true });
+    } catch (e) {
+        console.error('Error changing email:', e);
+        res.json({ okay: false, msg: 'Server error' });
+    }
+});
+
+// Change Password (User)
+site.post('/changePassword', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, msg: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, msg: 'Invalid token' });
+        }
+
+        const { oldPassword, newPassword } = req.body;
+        const user = storage.users[req.cookies.username];
+
+        // Verify old password
+        if (!validatePassword(oldPassword, user.salt, user.pass)) {
+            return res.json({ okay: false, msg: 'Old password is incorrect' });
+        }
+
+        // Hash new password with existing salt
+        const newHashed = hashPassword(newPassword, user.salt);
+        user.pass = newHashed.hash;
+
+        // Generate new token and update cookie
+        const newToken = genToken();
+        user.token = hashPassword(newToken, user.salt).hash;
+
+        save();
+
+        // Set new token cookie
+        res.cookie("token", newToken, { maxAge: 30 * 24 * 60 * 60 * 1000 });
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '🔒 Password Changed',
+                description: `User ${req.cookies.username} changed their password`,
+                color: 0x00FF00,
+                fields: [
+                    {
+                        name: 'User',
+                        value: req.cookies.username,
+                        inline: true
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true });
+    } catch (e) {
+        console.error('Error changing password:', e);
+        res.json({ okay: false, msg: 'Server error' });
+    }
+});
+
+// Delete All User's Miis (User - own miis only)
+site.post('/deleteAllMyMiis', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, msg: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, msg: 'Invalid token' });
+        }
+
+        const user = storage.users[req.cookies.username];
+        const miiIds = [...user.submissions];
+        let deletedCount = 0;
+
+        for (const miiId of miiIds) {
+            try {
+                const mii = storage.miis[miiId];
+                if (mii) {
+                    // Remove from miiIds
+                    const index = storage.miiIds.indexOf(miiId);
+                    if (index > -1) storage.miiIds.splice(index, 1);
+                    
+                    // Delete files
+                    try { fs.unlinkSync(`./static/miiImgs/${miiId}.jpg`); } catch(e) {}
+                    try { fs.unlinkSync(`./static/miiQRs/${miiId}.jpg`); } catch(e) {}
+                    
+                    // Delete Mii data
+                    delete storage.miis[miiId];
+                    deletedCount++;
+                }
+            } catch(e) {
+                console.error(`Error deleting Mii ${miiId}:`, e);
+            }
+        }
+
+        user.submissions = [];
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '🗑️ User Deleted All Their Miis',
+                description: `${req.cookies.username} deleted all their own Miis`,
+                color: 0xFF6600,
+                fields: [
+                    {
+                        name: 'User',
+                        value: req.cookies.username,
+                        inline: true
+                    },
+                    {
+                        name: 'Miis Deleted',
+                        value: deletedCount.toString(),
+                        inline: true
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true, deletedCount });
+    } catch (e) {
+        console.error('Error deleting all user Miis:', e);
+        res.json({ okay: false, msg: 'Server error' });
+    }
+});
+
+// Delete Account (User)
+site.post('/deleteAccount', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, msg: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, msg: 'Invalid token' });
+        }
+
+        const { password } = req.body;
+        const username = req.cookies.username;
+        const user = storage.users[username];
+
+        // Verify password
+        if (!validatePassword(password, user.salt, user.pass)) {
+            return res.json({ okay: false, msg: 'Password is incorrect' });
+        }
+
+        // Transfer Miis to a special "Deleted User" account
+        if (!storage.users["[Deleted User]"]) {
+            storage.users["[Deleted User]"] = {
+                salt: "",
+                pass: "",
+                creationDate: Date.now(),
+                email: "",
+                votedFor: [],
+                submissions: [],
+                miiPfp: "00000",
+                roles: [ROLES.BASIC],
+                moderator: false
+            };
+        }
+
+        // Transfer all Miis to deleted user account
+        user.submissions.forEach(miiId => {
+            if (storage.miis[miiId]) {
+                storage.miis[miiId].uploader = "[Deleted User]";
+                storage.users["[Deleted User]"].submissions.push(miiId);
+            }
+        });
+
+        // Delete user account
+        delete storage.users[username];
+
+        save();
+
+        // Clear cookies
+        res.clearCookie('username');
+        res.clearCookie('token');
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '👋 Account Deleted',
+                description: `User ${username} deleted their account`,
+                color: 0xFF0000,
+                fields: [
+                    {
+                        name: 'Username',
+                        value: username,
+                        inline: true
+                    },
+                    {
+                        name: 'Miis Transferred',
+                        value: user.submissions.length.toString(),
+                        inline: true
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true });
+    } catch (e) {
+        console.error('Error deleting account:', e);
+        res.json({ okay: false, msg: 'Server error' });
+    }
+});
 
 site.post('/uploadMii', upload.single('mii'), async (req, res) => {
     try {
@@ -950,6 +2110,15 @@ site.post('/uploadMii', upload.single('mii'), async (req, res) => {
             try { fs.unlinkSync("./uploads/" + req.file.filename); } catch (e) { }
             return;
         }
+        const user = storage.users[uploader];
+        
+        // Check if trying to upload official Mii without permission
+        if (req.body.official && !canUploadOfficial(user)) {
+            res.send("{'error':'Only Researchers and Administrators can upload official Miis'}");
+            try { fs.unlinkSync("./uploads/" + req.file.filename); } catch (e) { }
+            return;
+        }
+        
         let mii;
         if (req.body.type === "wii") {
             mii = miijs.convertMii(miijs.readWiiBin("./uploads/" + req.file.filename), "wii");
@@ -1073,10 +2242,18 @@ site.post('/convertMii', upload.single('mii'), async (req, res) => {
     }
 });
 site.post('/signup', (req, res) => {
-    if (storage.users[req.body.username] || !validate(req.query.newUser)) {
+    if (storage.users[req.body.username] || !validate(req.body.username)) {
         res.send("Username Invalid");
         return;
     }
+    
+    // Check IP ban
+    const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const ipHash = hashIP(clientIP);
+    if (storage.bannedIPs.includes(ipHash)) {
+        return res.send('This IP address has been permanently banned from creating accounts.');
+    }
+    
     var hashed = hashPassword(req.body.pass);
     var token = genToken();
     storage.users[req.body.username] = {
@@ -1084,14 +2261,17 @@ site.post('/signup', (req, res) => {
         pass: hashed.hash,
         verificationToken: hashPassword(token, hashed.salt).hash,
         creationDate: Date.now(),
-        email: hashPassword(req.body.email, hashed.salt).hash,
+        email: req.body.email, // CHANGED: Store email directly, not hashed
         votedFor: [],
         submissions: [],
-        miiPfp: "00000"
+        miiPfp: "00000",
+        roles: [ROLES.BASIC],
+        moderator: false
     };
+    
     let link = "https://miis.kestron.com/verify?user=" + encodeURIComponent(req.body.username) + "&token=" + encodeURIComponent(token);
-    sendEmail(req.body.email, "InfiniMii Verification", "Welcome to InfiniMii! Click here to finish signing up!<br>" + link + "<br>*Clicking this link will set a browser cookie to keep you logged in");
-    res.redirect("/");
+    sendEmail(req.body.email, "InfiniMii Verification", "Welcome to InfiniMii! Please verify your email by clicking this link: " + link);
+    res.send("Check your email to verify your account!");
     save();
 });
 site.post('/login', (req, res) => {

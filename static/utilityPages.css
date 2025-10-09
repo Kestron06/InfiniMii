@@ -248,3 +248,109 @@ h6 b,
         margin: 0.5rem 0;
     }
 }
+/* Add to utilityPages.css */
+
+.settings-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.settings-container fieldset {
+    margin-bottom: 30px;
+    padding: 30px;
+    background: var(--layer-2);
+    border: 2px solid var(--layer-3);
+    border-radius: 15px;
+}
+
+.settings-container legend {
+    padding: 0 15px;
+    font-size: 1.3em;
+    font-weight: bold;
+    color: var(--brand-color);
+}
+
+.setting-group {
+    margin-bottom: 25px;
+    padding-bottom: 25px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.setting-group:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.setting-group label {
+    display: block;
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+}
+
+.setting-group input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 2px solid #3a3d4a;
+    border-radius: 8px;
+    background-color: #1a1c26;
+    color: #fff;
+    font-size: 1em;
+}
+
+.setting-group input:focus {
+    outline: none;
+    border-color: var(--brand-color);
+}
+
+.setting-group button {
+    padding: 12px 24px;
+    background-color: var(--brand-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 1em;
+}
+
+.setting-group button:hover {
+    background-color: #c93855;
+    transform: translateY(-2px);
+}
+
+.setting-group button:active {
+    transform: translateY(0);
+}
+
+/* Danger Zone */
+.danger-zone {
+    border-color: #ff0000 !important;
+    background: linear-gradient(135deg, rgba(255, 0, 0, 0.1) 0%, rgba(139, 0, 0, 0.1) 100%);
+}
+
+.danger-zone legend {
+    color: #ff0000;
+}
+
+.warning-text {
+    color: #ffaa00;
+    background-color: rgba(255, 170, 0, 0.1);
+    padding: 10px;
+    border-radius: 5px;
+    border-left: 4px solid #ffaa00;
+    margin-bottom: 15px;
+    font-size: 0.95em;
+}
+
+.danger-btn {
+    background-color: #f44336 !important;
+}
+
+.danger-btn:hover {
+    background-color: #da190b !important;
+}

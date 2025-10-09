@@ -102,20 +102,19 @@
             </div>
 
             <!-- Uploader Information -->
+            <!-- Footer Section -->
             <div class="id-card-footer">
-                <% if(mii.uploader!=="Nintendo"){ %>
+                <% if(mii.official){ %>
+                <div class="uploader-info">
+                    <span class="official-badge">⭐ Official Nintendo Mii</span>
+                </div>
+                <% } %>
                 <div class="uploader-info">
                     <span class="label">Uploaded by</span>
                     <a href="/user?user=<%= mii.uploader %>"><%= mii.uploader %></a>
                     <span class="date">on <%= new Date(mii.uploadedOn).toLocaleDateString() %></span>
                 </div>
-                <% } else { %>
-                <div class="uploader-info">
-                    <span class="official-badge">Official Nintendo Mii</span>
-                </div>
-                <% } %>
             </div>
-
             <!-- Description -->
             <% if(mii.desc && mii.desc.length > 0) { %>
             <div class="id-card-description">
@@ -139,7 +138,7 @@
                 </a>
 
                 <div class="vote-section">
-                    <span onclick="likeMii(this,'<%= mii.id %>','<%= highlightedMii %>','<%= users[thisUser].moderator %>')">
+                    <span onclick="likeMii(this,'<%= mii.id %>','<%= highlightedMii %>','<%= users[thisUser].roles.includes(`moderator`) %>')">
                         <% if(!users[thisUser].votedFor.includes(mii.id)&&!users[thisUser].submissions.includes(mii.id)){ %>
                         <svg xmlns="http://www.w3.org/2000/svg" class="like-icon" viewBox="0 96 960 960" fill="currentColor">
                             <path d="m480 935-41-37q-105.768-97.121-174.884-167.561Q195 660 154 604.5T96.5 504Q80 459 80 413q0-90.155 60.5-150.577Q201 202 290 202q57 0 105.5 27t84.5 78q42-54 89-79.5T670 202q89 0 149.5 60.423Q880 322.845 880 413q0 46-16.5 91T806 604.5Q765 660 695.884 730.439 626.768 800.879 521 898l-41 37Zm0-79q101.236-92.995 166.618-159.498Q712 630 750.5 580t54-89.135q15.5-39.136 15.5-77.72Q820 347 778 304.5T670.225 262q-51.524 0-95.375 31.5Q531 325 504 382h-49q-26-56-69.85-88-43.851-32-95.375-32Q224 262 182 304.5t-42 108.816Q140 452 155.5 491.5t54 90Q248 632 314 698t166 158Zm0-297Z"/>
@@ -153,7 +152,7 @@
                         <span class="vote-count"><%= mii.votes %></span>
                     </span>
 
-                    <% if(users[thisUser].moderator||users[thisUser].submissions.includes(mii.id)){ %>
+                    <% if(users[thisUser].roles.includes('moderator')||users[thisUser].submissions.includes(mii.id)){ %>
                     <svg xmlns="http://www.w3.org/2000/svg" class="trash-icon" viewBox="0 96 960 960" fill="currentColor" onclick="deleteMii('<%= mii.id %>')">
                         <path d="M261 936q-24.75 0-42.375-17.625T201 876V306h-41v-60h188v-30h264v30h188v60h-41v570q0 24-18 42t-42 18H261Zm438-630H261v570h438V306ZM367 790h60V391h-60v399Zm166 0h60V391h-60v399ZM261 306v570-570Z"/>
                     </svg>
@@ -164,6 +163,77 @@
                     <% } %>
                 </div>
             </div>
+
+            <!-- Moderator Tools -->
+            <% if(users[thisUser]?.roles.includes('moderator')){ %>
+            <div class="moderator-tools">
+                <div class="mod-tools-header" onclick="toggleModTools()">
+                    <h3>🛠️ Moderator Tools</h3>
+                    <span class="dropdown-arrow" id="modToolsArrow">▼</span>
+                </div>
+                
+                <div class="mod-tools-content" id="modToolsContent">
+                    <div class="mod-tool-grid">
+                        <!-- Edit Mii Name -->
+                        <div class="mod-tool-item">
+                            <label>Mii Name:</label>
+                            <input type="text" id="editMiiName" value="<%= mii.meta.name %>" placeholder="Mii Name">
+                            <button onclick="updateMiiField('name', document.getElementById('editMiiName').value)">Update Name</button>
+                        </div>
+
+                        <!-- Edit Description -->
+                        <div class="mod-tool-item">
+                            <label>Description:</label>
+                            <textarea id="editDesc" rows="3" placeholder="Description"><%= mii.desc %></textarea>
+                            <button onclick="updateMiiField('desc', document.getElementById('editDesc').value)">Update Description</button>
+                        </div>
+
+                        <!-- Edit Creator Name -->
+                        <div class="mod-tool-item">
+                            <label>Creator Name (in Mii file):</label>
+                            <input type="text" id="editCreatorName" value="<%= mii.meta.creatorName || '' %>" placeholder="Creator Name">
+                            <button onclick="updateMiiField('creatorName', document.getElementById('editCreatorName').value)">Update Creator</button>
+                        </div>
+
+                        <!-- Switch Uploader -->
+                        <div class="mod-tool-item">
+                            <label>Change Uploader:</label>
+                            <input type="text" id="editUploader" value="<%= mii.uploader %>" placeholder="Username">
+                            <button onclick="updateMiiField('uploader', document.getElementById('editUploader').value)">Change Uploader</button>
+                        </div>
+
+                        <!-- Toggle Official Status -->
+                        <div class="mod-tool-item">
+                            <label>Official Mii Status:</label>
+                            <div class="toggle-container">
+                                <input type="checkbox" id="officialCheckbox" <%= mii.official ? 'checked' : '' %>>
+                                <label for="officialCheckbox">
+                                    <% if(mii.official) { %>
+                                        ✅ This is an Official Mii
+                                    <% } else { %>
+                                        ❌ Not an Official Mii
+                                    <% } %>
+                                </label>
+                            </div>
+                            <button onclick="toggleOfficial()">Update Official Status</button>
+                        </div>
+
+                        <!-- Regenerate QR Code -->
+                        <div class="mod-tool-item">
+                            <label>Regenerate QR Code:</label>
+                            <button onclick="regenerateQR()">🔄 Regenerate QR</button>
+                            <span id="qrStatus"></span>
+                        </div>
+
+                        <!-- Delete Mii -->
+                        <div class="mod-tool-item mod-tool-danger">
+                            <label>Delete Mii:</label>
+                            <button class="danger-btn" onclick="confirmDeleteMii()">🗑️ Delete Mii</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <% } %>
         </div>
         <div class="browse-featured-miis">
             <!--Higlighted Mii-->
@@ -173,7 +243,7 @@
                 <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAScAAAAyCAYAAAAeNh3dAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYxIDY0LjE0MDk0OSwgMjAxMC8xMi8wNy0xMDo1NzowMSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNS4xIE1hY2ludG9zaCIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDowN0Q4NEI4MEYyRjUxMUUyQkIyQzgyMzFDMDNCRTc0OSIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDowN0Q4NEI4MUYyRjUxMUUyQkIyQzgyMzFDMDNCRTc0OSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkM5RDJFRTU3RjBCRjExRTJCQjJDODIzMUMwM0JFNzQ5IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkM5RDJFRTU4RjBCRjExRTJCQjJDODIzMUMwM0JFNzQ5Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+wjmikgAABsNJREFUeNrsnb9v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" height='20' width='205' />
             </div>
             <div class="mii-card">
-                <% if(users[thisUser].moderator){ %>
+                <% if(users[thisUser].roles.includes('moderator')){ %>
                     <input type="text" placeholder="New Highlighted Mii ID?" id="highlightedMiiID"> <input type="button" onclick="highlightedMiiChange()" value="Change Highlighted Mii">
                 <% } %>
                 <a href='/mii?id=<%= highlightedMii %>'><img src="miiImgs/<%= highlightedMii %>.jpg"></a>
@@ -227,5 +297,143 @@
             fetch("/reportMii?id=<%= mii.id %>&what="+encodeURIComponent(what));
         }
     </script>
+
+    <!--Moderator Tools Functions - Because EJS runs server side, and the client only sees the result of the compilation, this prevents unnecessary JS from loading that doesn't need to be sent-->
+    <% if(users[thisUser]?.roles.includes('moderator')){ %>
+    <script>
+    function toggleModTools() {
+        const content = document.getElementById('modToolsContent');
+        const arrow = document.getElementById('modToolsArrow');
+        
+        content.classList.toggle('expanded');
+        arrow.classList.toggle('rotated');
+    }
+
+    async function updateMiiField(field, value) {
+        if (!value || value.trim() === '') {
+            alert('Please enter a valid value');
+            return;
+        }
+
+        const confirmed = confirm(`Are you sure you want to update the ${field}?`);
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch('/updateMiiField', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id: '<%= mii.id %>',
+                    field: field,
+                    value: value
+                })
+            });
+
+            const result = await response.json();
+            
+            if (result.okay) {
+                alert(`Successfully updated ${field}!`);
+                location.reload();
+            } else {
+                alert(`Error: ${result.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to update. Please try again.');
+        }
+    }
+
+    async function regenerateQR() {
+        const confirmed = confirm('Are you sure you want to regenerate the QR code?');
+        if (!confirmed) return;
+
+        const statusEl = document.getElementById('qrStatus');
+        statusEl.textContent = 'Regenerating...';
+        statusEl.style.color = '#FFA500';
+
+        try {
+            const response = await fetch('/regenerateQR?id=<%= mii.id %>');
+            const result = await response.json();
+            
+            if (result.okay) {
+                statusEl.textContent = '✓ Done!';
+                statusEl.style.color = '#4CAF50';
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                statusEl.textContent = `✗ Error: ${result.error}`;
+                statusEl.style.color = '#f44336';
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            statusEl.textContent = '✗ Failed';
+            statusEl.style.color = '#f44336';
+        }
+    }
+
+    async function confirmDeleteMii() {
+        const miiName = '<%= mii.meta.name %>';
+        const confirmed = confirm(`Are you ABSOLUTELY SURE you want to DELETE the Mii "${miiName}"?\n\nThis action CANNOT be undone!`);
+        
+        if (!confirmed) return;
+
+        const doubleCheck = prompt(`Type "DELETE" to confirm deletion of ${miiName}:`);
+        if (doubleCheck !== 'DELETE') {
+            alert('Deletion cancelled.');
+            return;
+        }
+
+        try {
+            const response = await fetch('/deleteMii?id=<%= mii.id %>');
+            const result = await response.json();
+            
+            if (result.okay) {
+                alert('Mii deleted successfully');
+                window.location.href = '/';
+            } else {
+                alert('Error deleting Mii');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to delete Mii');
+        }
+    }
+
+    async function toggleOfficial() {
+        const isOfficial = document.getElementById('officialCheckbox').checked;
+        
+        const confirmed = confirm(`Are you sure you want to mark this Mii as ${isOfficial ? 'OFFICIAL' : 'NOT OFFICIAL'}?\n\nOfficial Miis are shown with a special badge.`);
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch('/toggleMiiOfficial', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id: '<%= mii.id %>',
+                    official: isOfficial
+                })
+            });
+
+            const result = await response.json();
+            
+            if (result.okay) {
+                alert(`Mii official status updated!`);
+                location.reload();
+            } else {
+                alert(`Error: ${result.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to update official status');
+        }
+}
+    </script>
+    <% } %>
 </body>
 </html>

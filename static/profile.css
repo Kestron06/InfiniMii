@@ -195,6 +195,7 @@
     font-size: 14px;
     line-height: 1.4;
     display: -webkit-box;
+    line-clamp: 3;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
@@ -329,4 +330,202 @@
     #browse-miis {
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     }
+}
+
+/* Role Badges */
+.profile-name {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.mod-badge, .admin-badge, .supporter-badge, .researcher-badge, .banned-badge {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.85em;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.mod-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.admin-badge {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.supporter-badge {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    color: white;
+}
+
+.researcher-badge {
+    background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+    color: white;
+}
+
+.banned-badge {
+    background: linear-gradient(135deg, #ff0000 0%, #8b0000 100%);
+    color: white;
+}
+
+/* Moderator Tools Styling */
+.moderator-tools {
+    margin-bottom: 30px;
+    background: linear-gradient(135deg, #2a2d3a 0%, #1a1c26 100%);
+    border-radius: 15px;
+    border: 2px solid #ff6b6b;
+    overflow: hidden;
+}
+
+.mod-tools-header {
+    padding: 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    transition: background-color 0.3s;
+}
+
+.mod-tools-header:hover {
+    background-color: rgba(255, 107, 107, 0.1);
+}
+
+.mod-tools-header h3 {
+    color: #ff6b6b;
+    margin: 0;
+    font-size: 1.4em;
+}
+
+.dropdown-arrow {
+    color: #ff6b6b;
+    font-size: 1.2em;
+    transition: transform 0.3s;
+}
+
+.dropdown-arrow.rotated {
+    transform: rotate(-180deg);
+}
+
+.mod-tools-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+    padding: 0 20px;
+}
+
+.mod-tools-content.expanded {
+    max-height: 2000px;
+    padding: 0 20px 20px 20px;
+}
+
+.mod-tool-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.mod-tool-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mod-tool-item label {
+    font-weight: bold;
+    color: #fff;
+    font-size: 0.95em;
+}
+
+.mod-tool-item input,
+.mod-tool-item select {
+    padding: 10px;
+    border: 2px solid #3a3d4a;
+    border-radius: 8px;
+    background-color: #1a1c26;
+    color: #fff;
+    font-size: 0.95em;
+    transition: border-color 0.3s;
+}
+
+.mod-tool-item input:focus,
+.mod-tool-item select:focus {
+    outline: none;
+    border-color: #ff6b6b;
+}
+
+.mod-tool-item button {
+    padding: 10px 16px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.mod-tool-item button:hover {
+    background-color: #45a049;
+    transform: translateY(-2px);
+}
+
+.mod-tool-item button:active {
+    transform: translateY(0);
+}
+
+.mod-tool-danger button,
+.danger-btn {
+    background-color: #f44336 !important;
+}
+
+.mod-tool-danger button:hover,
+.danger-btn:hover {
+    background-color: #da190b !important;
+}
+
+/* Add to profile.css */
+.mod-tool-roles {
+    grid-column: 1 / -1; /* Make it span full width */
+}
+
+.role-checkboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+}
+
+.role-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+}
+
+.role-checkbox:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.role-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.profile-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }

@@ -407,3 +407,166 @@
         justify-content: center;
     }
 }
+
+/* Moderator Tools Styling */
+.moderator-tools {
+    margin-top: 30px;
+    background: linear-gradient(135deg, #2a2d3a 0%, #1a1c26 100%);
+    border-radius: 15px;
+    border: 2px solid #ff6b6b;
+    overflow: hidden;
+}
+
+.mod-tools-header {
+    padding: 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    transition: background-color 0.3s;
+}
+
+.mod-tools-header:hover {
+    background-color: rgba(255, 107, 107, 0.1);
+}
+
+.mod-tools-header h3 {
+    color: #ff6b6b;
+    margin: 0;
+    font-size: 1.4em;
+}
+
+.dropdown-arrow {
+    color: #ff6b6b;
+    font-size: 1.2em;
+    transition: transform 0.3s;
+}
+
+.dropdown-arrow.rotated {
+    transform: rotate(-180deg);
+}
+
+.mod-tools-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+    padding: 0 20px;
+}
+
+.mod-tools-content.expanded {
+    max-height: 2000px;
+    padding: 0 20px 20px 20px;
+}
+
+.mod-tool-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.mod-tool-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mod-tool-item label {
+    font-weight: bold;
+    color: #fff;
+    font-size: 0.95em;
+}
+
+.mod-tool-item input,
+.mod-tool-item textarea {
+    padding: 10px;
+    border: 2px solid #3a3d4a;
+    border-radius: 8px;
+    background-color: #1a1c26;
+    color: #fff;
+    font-size: 0.95em;
+    transition: border-color 0.3s;
+}
+
+.mod-tool-item input:focus,
+.mod-tool-item textarea:focus {
+    outline: none;
+    border-color: #ff6b6b;
+}
+
+.mod-tool-item textarea {
+    resize: vertical;
+    font-family: inherit;
+}
+
+.mod-tool-item button {
+    padding: 10px 16px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.mod-tool-item button:hover {
+    background-color: #45a049;
+    transform: translateY(-2px);
+}
+
+.mod-tool-item button:active {
+    transform: translateY(0);
+}
+
+.mod-tool-danger button,
+.danger-btn {
+    background-color: #f44336 !important;
+}
+
+.mod-tool-danger button:hover,
+.danger-btn:hover {
+    background-color: #da190b !important;
+}
+
+#qrStatus {
+    font-size: 0.9em;
+    color: #4CAF50;
+}
+
+.toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+}
+
+.toggle-container input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.toggle-container label {
+    cursor: pointer;
+    margin: 0;
+    font-size: 1em;
+    color: #fff;
+}
+
+/* Update official badge to work in multiple contexts */
+.official-badge {
+    background: linear-gradient(90deg, gold 0%, #ffd700 100%);
+    color: #000;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
