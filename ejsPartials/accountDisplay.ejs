@@ -1,0 +1,11 @@
+<div class="account">
+    <% if(thisUser!=='default'){ %>
+        <img src="miiImgs/<%= pfp %>.jpg"> <%= thisUser %>
+        <div class="accDropdown">
+            <a href="/user?user=<%= thisUser %>">Profile</a>
+            <a href="/logout">Logout</a>
+        </div>
+    <% } else{ %>
+        <a href="/signup">Sign Up</a> | <a href="/login">Log In</a>
+    <% } %>
+</div>

@@ -13,6 +13,27 @@ var upload = multer({ dest: 'uploads/' });
 var globalSalt = process.env.salt;
 process.env=require("./env.json");
 
+var partials={};
+fs.readdirSync("./partials").forEach(file=>{
+    if(!file.endsWith(".html")) return;
+    partials[file.split(".")[0]]=fs.readFileSync(`./partials/${file}`,"utf-8");
+});
+function getSendables(req){
+    //EJS renders server side, only what we render in the file gets sent, so having storage readily available is much easier and not a problem for security
+    var send=Object.assign(Object.assign(storage,{ thisUser: req.cookies.username||"default", pfp: storage.users[req.cookies.username||"default"].miiPfp }),req.query);
+    send.partials=structuredClone(partials);
+    fs.readdirSync(`./ejsPartials`).forEach(file=>{
+        if(!file.endsWith(".ejs")) return;
+        ejs.renderFile(`./ejsPartials/${file}`, send, {}, function(err, str) {
+            if (err) {
+                return;
+            }
+            send.partials[file.split(".")[0]]=str;
+        });
+    });
+    return send;
+}
+
 // Role System - Array-based for multiple roles
 const ROLES = {
     TEMP_BANNED: 'tempBanned',
@@ -145,17 +166,6 @@ function isVPN(ip) {
     // This is a placeholder - implement proper VPN detection if needed
     return false; // TODO: Implement VPN detection
 }
-
-// Initialize banned IPs storage if it doesn't exist
-if (!storage.bannedIPs) {
-    storage.bannedIPs = [];
-    save();
-}
-
-const header=`<header>
-				<a href="/"><img src='banner.png' id="banner"></a>
-			</header>`;
-const footer=``;
 
 function objCopy(obj) {
     return JSON.parse(JSON.stringify(obj));
@@ -599,11 +609,8 @@ site.listen(8080, async () => {
 
 //The following up to and including /recent are all sorted before being renders in miis.ejs, meaning the file is recycled. / is currently just a clone of /top. /official and /search is more of the same but with a slight change to make Highlighted Mii still work without the full Mii array
 site.get('/', (req, res) => {
-    var user = req.cookies.username || "default";
-    let toSend = Object.assign({}, storage, { thisUser: user, pfp: storage.users[user].miiPfp });
+    let toSend = getSendables(req);
     toSend.title = "InfiniMii";
-    toSend.header=header;
-    toSend.footer=footer;
     toSend.miiCategories={
         "Random":{miis:api("random",5),link:"./random"},
         "Top":{miis:api("top",5),link:"./top"},
@@ -621,13 +628,9 @@ site.get('/', (req, res) => {
     });
 });
 site.get('/random', (req, res) => {
-    var user = req.cookies.username || "default";
-    let toSend = Object.assign({}, storage, { thisUser: user, pfp: storage.users[user].miiPfp });
-    toSend.miis = api("random",30);
-    toSend.highlightedMii=storage.miis[storage.highlightedMii];
+    let toSend = getSendables(req);
+    toSend.displayedMiis = api("random",30);
     toSend.title = "Random Miis - InfiniMii";
-    toSend.header=header;
-    toSend.footer=footer;
     ejs.renderFile('./ejsFiles/miis.ejs', toSend, {}, function(err, str) {
         if (err) {
             res.send(err);
@@ -638,13 +641,9 @@ site.get('/random', (req, res) => {
     });
 });
 site.get('/top', (req, res) => {
-    var user = req.cookies.username || "default";
-    let toSend = Object.assign({}, storage, { thisUser: user, pfp: storage.users[user].miiPfp });
-    toSend.highlightedMii=storage.miis[storage.highlightedMii];
-    toSend.miis = api("top",30);
+    let toSend = getSendables(req);
+    toSend.displayedMiis = api("top",30);
     toSend.title = "Top Miis - InfiniMii";
-    toSend.header=header;
-    toSend.footer=footer;
     ejs.renderFile('./ejsFiles/miis.ejs', toSend, {}, function(err, str) {
         if (err) {
             res.send(err);
@@ -655,13 +654,9 @@ site.get('/top', (req, res) => {
     });
 });
 site.get('/best', (req, res) => {
-    var user = req.cookies.username || "default";
-    let toSend = Object.assign({}, storage, { thisUser: user, pfp: storage.users[user].miiPfp });
-    toSend.highlightedMii=storage.miis[storage.highlightedMii];
-    toSend.miis = api("best",30);
+    let toSend = getSendables(req);
+    toSend.displayedMiis = api("best",30);
     toSend.title = "All-Time Top Miis - InfiniMii";
-    toSend.header=header;
-    toSend.footer=footer;
     ejs.renderFile('./ejsFiles/miis.ejs', toSend, {}, function(err, str) {
         if (err) {
             res.send(err);
@@ -672,13 +667,9 @@ site.get('/best', (req, res) => {
     });
 });
 site.get('/recent', (req, res) => {
-    var user = req.cookies.username || "default";
-    let toSend = Object.assign({}, storage, { thisUser: user, pfp: storage.users[user].miiPfp });
-    toSend.highlightedMii=storage.miis[storage.highlightedMii];
-    toSend.miis = api("recent",30);
+    let toSend = getSendables(req);
+    toSend.displayedMiis = api("recent",30);
     toSend.title = "Recent Miis - InfiniMii";
-    toSend.header=header;
-    toSend.footer=footer;
     ejs.renderFile('./ejsFiles/miis.ejs', toSend, {}, function(err, str) {
         if (err) {
             res.send(err);
@@ -689,13 +680,9 @@ site.get('/recent', (req, res) => {
     });
 });
 site.get('/official', (req, res) => {
-    var user = req.cookies.username || "default";
-    let toSend = Object.assign({}, storage, { thisUser: user, pfp: storage.users[user].miiPfp });
-    toSend.highlightedMii=storage.miis[storage.highlightedMii];
-    toSend.miis = api("official",30);
+    let toSend = getSendables(req);
+    toSend.displayedMiis = api("official",30);
     toSend.title = "Official Miis - InfiniMii";
-    toSend.header=header;
-    toSend.footer=footer;
     ejs.renderFile('./ejsFiles/miis.ejs', toSend, {}, function(err, str) {
         if (err) {
             res.send(err);
@@ -706,13 +693,9 @@ site.get('/official', (req, res) => {
     });
 });
 site.get('/searchResults', (req, res) => {
-    var user = req.cookies.username || "default";
-    let toSend = Object.assign({}, storage, { thisUser: user, pfp: storage.users[user].miiPfp });
-    toSend.highlightedMii=storage.miis[storage.highlightedMii];
-    toSend.miis = api("search",30,0,req.query.q);
+    let toSend = getSendables(req)
+    toSend.displayedMiis = api("search",30,0,req.query.q);
     toSend.title = "Search '" + req.query.q + "' - InfiniMii";
-    toSend.header=header;
-    toSend.footer=footer;
     ejs.renderFile('./ejsFiles/miis.ejs', toSend, {}, function(err, str) {
         if (err) {
             res.send(err);
@@ -723,7 +706,7 @@ site.get('/searchResults', (req, res) => {
     });
 });
 site.get('/search', (req, res) => {
-    ejs.renderFile('./ejsFiles/search.ejs', Object.assign({}, storage, { thisUser: (req.cookies.username || "default"), pfp: storage.users[(req.cookies.username || "default")].miiPfp }, {header:header,footer:footer}), {}, function(err, str) {
+    ejs.renderFile('./ejsFiles/search.ejs', getSendables(req), {}, function(err, str) {
         if (err) {
             res.send(err);
             console.log(err);
@@ -733,7 +716,7 @@ site.get('/search', (req, res) => {
     });
 });
 site.get('/upload', (req, res) => {
-    ejs.renderFile('./ejsFiles/upload.ejs', Object.assign({}, storage, { thisUser: (req.cookies.username || "default"), pfp: storage.users[(req.cookies.username || "default")].miiPfp }, {header:header,footer:footer}), {}, function(err, str) {
+    ejs.renderFile('./ejsFiles/upload.ejs', getSendables(req), {}, function(err, str) {
         if (err) {
             res.send(err);
             console.log(err);
@@ -1594,10 +1577,8 @@ site.get('/voteMii', (req, res) => {
     save();
 });
 site.get('/mii', (req, res) => {
-    let inp = Object.assign({}, storage, { thisUser: (req.cookies.username || "default"), pfp: storage.users[(req.cookies.username || "default")].miiPfp });
+    let inp = getSendables(req);
     inp.mii = storage.miis[req.query.id];
-    inp.header=header;
-    inp.footer=footer;
     inp.height=miijs.miiHeightToFeetInches(inp.mii.general.height);
     inp.weight=miijs.miiWeightToRealWeight(inp.mii.general.height,inp.mii.general.weight);
     ejs.renderFile('./ejsFiles/miiPage.ejs', inp, {}, function(err, str) {
@@ -1614,16 +1595,13 @@ site.get('/user', (req, res) => {
         res.redirect('/official');
         return;
     }
-    let inp = Object.assign({}, storage, { thisUser: (req.cookies.username || "default"), pfp: storage.users[(req.cookies.username || "default")].miiPfp });
+    let inp = getSendables(req);
     inp.user = storage.users[req.query.user];
     inp.user.name = req.query.user;
-    inp.miis = [];
+    inp.displayedMiis = [];
     storage.users[req.query.user].submissions.forEach(mii => {
-        inp.miis.push(storage.miis[mii]);
+        inp.displayedMiis.push(storage.miis[mii]);
     });
-    inp.header=header;
-    inp.footer=footer;
-    inp.highlightedMii=storage.miis[storage.highlightedMii];
     ejs.renderFile('./ejsFiles/userPage.ejs', inp, {}, function(err, str) {
         if (err) {
             res.send(err);
@@ -1656,7 +1634,7 @@ site.get('/logout', async (req, res) => {
     save();
 });
 site.get('/convert', (req, res) => {
-    ejs.renderFile('./ejsFiles/convert.ejs', Object.assign({}, storage, { thisUser: (req.cookies.username || "default"), pfp: storage.users[(req.cookies.username || "default")].miiPfp },{header:header,footer:footer}), {}, function(err, str) {
+    ejs.renderFile('./ejsFiles/convert.ejs', getSendables(req), {}, function(err, str) {
         if (err) {
             res.send(err);
             console.log(err);
@@ -1666,7 +1644,7 @@ site.get('/convert', (req, res) => {
     });
 });
 site.get('/qr', (req, res) => {
-    ejs.renderFile('./ejsFiles/qr.ejs', Object.assign({}, storage, { thisUser: (req.cookies.username || "default"), pfp: storage.users[(req.cookies.username || "default")].miiPfp },{header:header,footer:footer}), {}, function(err, str) {
+    ejs.renderFile('./ejsFiles/qr.ejs', getSendables(req), {}, function(err, str) {
         if (err) {
             res.send(err);
             console.log(err);
@@ -1680,8 +1658,7 @@ site.get('/settings', (req, res) => {
         res.redirect("/");
         return;
     }
-    var toSend=Object.assign({}, storage, { thisUser: req.cookies.username, pfp: storage.users[req.cookies.username].miiPfp}, {header:header,footer:footer});
-    toSend.highlightedMii=storage.miis[storage.highlightedMii];
+    var toSend=getSendables(req);
     ejs.renderFile('./ejsFiles/settings.ejs', toSend, {}, function(err, str) {
         if (err) {
             res.send(err);

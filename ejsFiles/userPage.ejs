@@ -1,510 +1,452 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title><%= user.name %> - InfiniMii</title>
-    <meta content="<%= user.name %>" property="og:title" />
-    <meta content="User <%= user.name %>'s Miis on InfiniMii'" property="og:description" />
-    <meta content="https://miis.kestron.com/user?user=<%= user.name %>" property="og:url" />
-    <meta content="https://miis.kestron.com/miiImgs/<%= user.miiPfp %>.jpg" property="og:image" />
-    <meta content="#ff0000" data-react-helmet="true" name="theme-color" />
-    <link rel="stylesheet" href="global.css">
-    <link rel="stylesheet" href="profile.css">
-</head>
-<body>
-    <%- header %>
-    <div class="account">
-        <% if(thisUser==="default"){ %>
-            <a href="/signup">Sign Up</a> | <a href="/login">Log In</a>
-        <% } else{ %>
-            <img src="miiImgs/<%= pfp %>.jpg"> <%= thisUser %>
-            <div class="accDropdown">
-                <a href="/user?user=<%= thisUser %>">Profile</a>
-                <a href="/logout">Logout</a>
-            </div>
-        <% } %>
-    </div>
-    
-    <div class="content">
-        <div class="left-sidebar">
-            <ul class="sidebar-list">
-                <a href="/search"><li>🔍 Search</li></a>
-                <a href="/top"><li>📈 Top Miis</li></a>
-                <a href="/best"><li>🥇 All-Time Top Miis</li></a>
-                <a href="/recent"><li>⏱️ Recent Miis</li></a>
-                <a href="/official"><li>🌟 Official Miis</li></a>
-            </ul>
-            <br>
-            <ul class="sidebar-list">
-                <a href="/upload"><li>⬆️ Upload</li></a>
-                <a href="<%= thisUser==='default'?'/signup':'/user?user='+thisUser %>"><li><img src="miiImgs/<%= pfp %>.jpg" width="18px" height="18px"> Profile</li></a>
-                <a href="/settings"><li>⚙️ Settings</li></a>
-                <a href="/convert"><li>➡️ Convert</li></a>
-                <a href="/qr"><li>📸 QR Options</li></a>
-            </ul>
-        </div>
-        
-        <div class="profile-container">
-            <!-- Profile Header -->
-            <div class="profile-header">
-                <img src="/miiImgs/<%= user.miiPfp %>.jpg" alt="<%= user.name %>" class="profile-avatar">
-                
-                <div class="profile-info">
-                    <div class="profile-name">
-                        <h1><%= user.name %></h1>
-                        <% 
-                        const ROLE_DISPLAY = {
-                            'tempBanned': '🚫 Temp Banned',
-                            'permBanned': '⛔ Perm Banned',
-                            'basic': '',
-                            'supporter': '💖 Supporter',
-                            'researcher': '🔬 Researcher',
-                            'moderator': '🛡️ Moderator',
-                            'administrator': '👑 Administrator'
-                        };
-                        const roleClass = {
-                            'tempBanned': 'banned-badge',
-                            'permBanned': 'banned-badge',
-                            'supporter': 'supporter-badge',
-                            'researcher': 'researcher-badge',
-                            'moderator': 'mod-badge',
-                            'administrator': 'admin-badge'
-                        };
-                        
-                        // Get user roles (support both old and new format)
-                        const userRoles = user.roles || (user.role ? [user.role] : (user.roles.includes('moderator') ? ['moderator'] : []));
-                        %>
-                        <% userRoles.forEach(role => { %>
-                            <% if(ROLE_DISPLAY[role]) { %>
-                            <span class="<%= roleClass[role] || 'mod-badge' %>"><%= ROLE_DISPLAY[role] %></span>
+    <head>
+        <title><%= user.name %> - InfiniMii</title>
+        <meta content="<%= user.name %>" property="og:title" />
+        <meta content="User <%= user.name %>'s Miis on InfiniMii'" property="og:description" />
+        <meta content="https://miis.kestron.com/user?user=<%= user.name %>" property="og:url" />
+        <meta content="https://miis.kestron.com/miiImgs/<%= user.miiPfp %>.jpg" property="og:image" />
+        <meta content="#ff0000" data-react-helmet="true" name="theme-color" />
+        <link rel="stylesheet" href="global.css">
+        <link rel="stylesheet" href="profile.css">
+    </head>
+    <body>
+        <%- partials.header %>
+        <%- partials.accountDisplay %>
+        <div class="content">
+            <%- partials.sidebar %>
+            <div class="profile-container">
+                <!-- Profile Header -->
+                <div class="profile-header">
+                    <img src="/miiImgs/<%= user.miiPfp %>.jpg" alt="<%= user.name %>" class="profile-avatar">
+                    <div class="profile-info">
+                        <div class="profile-name">
+                            <h1><%= user.name %></h1>
+                            <% const ROLE_DISPLAY={ 
+                                'tempBanned': '🚫 Temp Banned',
+                                'permBanned': '⛔ Perm Banned',
+                                'basic': '' ,
+                                'supporter': '💖 Supporter',
+                                'researcher': '🔬 Researcher',
+                                'moderator': '🛡️ Moderator',
+                                'administrator': '👑 Administrator'
+                            };
+                            const roleClass={
+                                'tempBanned': 'banned-badge',
+                                'permBanned': 'banned-badge',
+                                'supporter': 'supporter-badge',
+                                'researcher': 'researcher-badge',
+                                'moderator': 'mod-badge',
+                                'administrator': 'admin-badge'
+                            };
+                            userRoles=user.roles || (user.role ? [user.role] : (user.roles.includes('moderator') ? ['moderator'] : [])); %>
+                            <% userRoles.forEach(role=> { %>
+                                <% if(ROLE_DISPLAY[role]) { %>
+                                    <span class="<%= roleClass[role] || 'mod-badge' %>">
+                                        <%= ROLE_DISPLAY[role] %>
+                                    </span>
+                                <% } %>
+                            <% }); %>
+                        </div>
+
+                        <div class="profile-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Miis Uploaded</span>
+                                <span class="stat-value">
+                                    <%= displayedMiis.length %>
+                                </span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Total Likes</span>
+                                <span class="stat-value">
+                                    <%= displayedMiis.reduce((sum, mii)=> sum + (mii.votes || 0), 0) %>
+                                </span>
+                            </div>
+                            <% if(user.joinedOn) { %>
+                                <div class="stat-item">
+                                    <span class="stat-label">Member Since</span>
+                                    <span class="stat-value">
+                                        <%= new Date(user.joinedOn).toLocaleDateString('en-US', {
+                                            year: 'numeric' , month: 'short' }) %>
+                                    </span>
+                                </div>
                             <% } %>
-                        <% }); %>
-                    </div>
-                    
-                    <div class="profile-stats">
-                        <div class="stat-item">
-                            <span class="stat-label">Miis Uploaded</span>
-                            <span class="stat-value"><%= miis.length %></span>
                         </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Total Likes</span>
-                            <span class="stat-value"><%= miis.reduce((sum, mii) => sum + (mii.votes || 0), 0) %></span>
-                        </div>
-                        <% if(user.joinedOn) { %>
-                        <div class="stat-item">
-                            <span class="stat-label">Member Since</span>
-                            <span class="stat-value"><%= new Date(user.joinedOn).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) %></span>
-                        </div>
-                        <% } %>
                     </div>
                 </div>
-            </div>
-        
-            <!-- Moderator Tools for Profiles -->
-            <% 
-            const currentUserRoles = users[thisUser] ? (users[thisUser].roles || (users[thisUser].role ? [users[thisUser].role] : (users[thisUser].roles.includes('moderator') ? ['moderator'] : []))) : [];
-            const canModerateProfile = (currentUserRoles.includes('moderator') || currentUserRoles.includes('administrator')) && thisUser!==user.name;
-            %>
-            <% if(canModerateProfile) { %>
-            <div class="moderator-tools">
-                <div class="mod-tools-header" onclick="toggleModTools()">
-                    <h3>🛠️ Moderator Tools</h3>
-                    <span class="dropdown-arrow" id="modToolsArrow">▼</span>
-                </div>
-                
-                <div class="mod-tools-content" id="modToolsContent">
-                    <div class="mod-tool-grid">
-                        
-                        <!-- Change Role (Admin Only) -->
-                        <% if(currentUserRoles.includes('administrator')) { %>
-                        <div class="mod-tool-item mod-tool-roles">
-                            <label>User Roles (check multiple):</label>
-                            <div class="role-checkboxes">
-                                <%
-                                const userRoles = user.roles || (user.role ? [user.role] : ['basic']);
-                                %>
-                                <label class="role-checkbox">
-                                    <input type="checkbox" value="supporter" <%= userRoles.includes('supporter') ? 'checked' : '' %>>
-                                    💖 Supporter
-                                </label>
-                                <label class="role-checkbox">
-                                    <input type="checkbox" value="researcher" <%= userRoles.includes('researcher') ? 'checked' : '' %>>
-                                    🔬 Researcher
-                                </label>
-                                <label class="role-checkbox">
-                                    <input type="checkbox" value="moderator" <%= userRoles.includes('moderator') ? 'checked' : '' %>>
-                                    🛡️ Moderator
-                                </label>
-                                <label class="role-checkbox">
-                                    <input type="checkbox" value="administrator" <%= userRoles.includes('administrator') ? 'checked' : '' %>>
-                                    👑 Administrator
-                                </label>
-                            </div>
-                            <button onclick="updateUserRoles()">Update Roles</button>
-                        </div>
-                        <% } %>
 
-                        <!-- Temporary Ban -->
-                        <div class="mod-tool-item">
-                            <label>Temporary Ban:</label>
-                            <input type="number" id="banHours" placeholder="Hours" min="24">
-                            <input type="text" id="tempBanReason" placeholder="Reason">
-                            <button onclick="tempBanUser()">⏰ Temp Ban</button>
+                <!-- Moderator Tools for Profiles -->
+                <% const currentUserRoles=users[thisUser] ? (users[thisUser].roles || (users[thisUser].role ?
+                    [users[thisUser].role] : (users[thisUser].roles.includes('moderator') ? ['moderator'] :
+                    []))) : []; const canModerateProfile=(currentUserRoles.includes('moderator') ||
+                    currentUserRoles.includes('administrator')) && thisUser!==user.name; %>
+                <% if(canModerateProfile) { %>
+                    <div class="moderator-tools">
+                        <div class="mod-tools-header" onclick="toggleModTools()">
+                            <h3>🛠️ Moderator Tools</h3>
+                            <span class="dropdown-arrow" id="modToolsArrow">▼</span>
                         </div>
 
-                        <!-- Permanent Ban (Admin Only) -->
-                        <% if(users[thisUser].role === 'administrator') { %>
-                        <div class="mod-tool-item mod-tool-danger">
-                            <label>Permanent Ban (deletes account & all Miis):</label>
-                            <input type="text" id="permBanReason" placeholder="Reason">
-                            <button class="danger-btn" onclick="permBanUser()">⛔ Permanent Ban</button>
-                        </div>
-                        <% } %>
+                        <div class="mod-tools-content" id="modToolsContent">
+                            <div class="mod-tool-grid">
+                                <!-- Change Role (Admin Only) -->
+                                <% if(currentUserRoles.includes('administrator')) { %>
+                                    <div class="mod-tool-item mod-tool-roles">
+                                        <label>User Roles (check multiple):</label>
+                                        <div class="role-checkboxes">
+                                            <% const userRoles=user.roles || (user.role ? [user.role] :
+                                                ['basic']); %>
+                                                <label class="role-checkbox">
+                                                    <input type="checkbox" value="supporter" <%= userRoles.includes('supporter') ? 'checked' : '' %>>
+                                                    💖 Supporter
+                                                </label>
+                                                <label class="role-checkbox">
+                                                    <input type="checkbox" value="researcher" <%= userRoles.includes('researcher') ? 'checked' : '' %>>
+                                                    🔬 Researcher
+                                                </label>
+                                                <label class="role-checkbox">
+                                                    <input type="checkbox" value="moderator" <%=userRoles.includes('moderator') ? 'checked' : '' %>>
+                                                    🛡️ Moderator
+                                                </label>
+                                                <label class="role-checkbox">
+                                                    <input type="checkbox" value="administrator" <%=userRoles.includes('administrator') ? 'checked' : '' %>>
+                                                    👑 Administrator
+                                                </label>
+                                        </div>
+                                        <button onclick="updateUserRoles()">Update Roles</button>
+                                    </div>
+                                <% } %>
 
-                        <!-- Delete All Miis -->
-                        <div class="mod-tool-item mod-tool-danger">
-                            <label>Delete All User's Miis:</label>
-                            <button class="danger-btn" onclick="deleteAllUserMiis()">🗑️ Delete All Miis (<%= miis.length %>)</button>
-                        </div>
+                                <!-- Temporary Ban -->
+                                <div class="mod-tool-item">
+                                    <label>Temporary Ban:</label>
+                                    <input type="number" id="banHours" placeholder="Hours" min="24">
+                                    <input type="text" id="tempBanReason" placeholder="Reason">
+                                    <button onclick="tempBanUser()">⏰ Temp Ban</button>
+                                </div>
 
-                        <!-- Change Username -->
-                        <div class="mod-tool-item">
-                            <label>Change Username:</label>
-                            <input type="text" id="newUsername" value="<%= user.name %>" placeholder="New Username">
-                            <button onclick="changeUsername()">✏️ Change Username</button>
-                        </div>
+                                <!-- Permanent Ban (Admin Only) -->
+                                <% if(users[thisUser].role==='administrator' ) { %>
+                                    <div class="mod-tool-item mod-tool-danger">
+                                        <label>Permanent Ban (deletes account & all Miis):</label>
+                                        <input type="text" id="permBanReason" placeholder="Reason">
+                                        <button class="danger-btn" onclick="permBanUser()">⛔
+                                            Permanent Ban</button>
+                                    </div>
+                                <% } %>
 
-                        <!-- Change Profile Picture -->
-                        <div class="mod-tool-item">
-                            <label>Change Profile Picture (Mii ID):</label>
-                            <input type="text" id="newPfp" value="<%= user.miiPfp %>" placeholder="Mii ID">
-                            <button onclick="changeUserPfp()">🖼️ Change PFP</button>
-                        </div>
+                                <!-- Delete All Miis -->
+                                <div class="mod-tool-item mod-tool-danger">
+                                    <label>Delete All User's Miis:</label>
+                                    <button class="danger-btn"
+                                        onclick="deleteAllUserMiis()">🗑️ Delete All Miis (
+                                        <%= displayedMiis.length %>)
+                                    </button>
+                                </div>
 
-                    </div>
-                </div>
-            </div>
-            <% } %>
-            
-            <!-- Profile Content -->
-            <div class="profile-content">
-                <h2 class="profile-section-title"><%= user.name %>'s Miis</h2>
-                
-                <% if(miis.length > 0) { %>
-                <div id="browse-miis">
-                    <% for(var i=0; i<miis.length && i<50; i++){ %>
-                    <div class="mii-card" id="<%= miis[i].id %>">
-                        <a href="<%= '/mii?id='+miis[i].id %>">
-                            <img src="miiImgs/<%= miis[i].id %>.jpg" alt="<%= miis[i].meta?.name || miis[i].name %>">
-                        </a>
-                        <div class="flex">
-                            <div>
-                                <h3><%= miis[i].meta?.name || miis[i].name %></h3>
-                                <a href="<%= '/user?user='+encodeURIComponent(miis[i].uploader) %>"><%= miis[i].uploader %></a>
+                                <!-- Change Username -->
+                                <div class="mod-tool-item">
+                                    <label>Change Username:</label>
+                                    <input type="text" id="newUsername"
+                                        value="<%= user.name %>" placeholder="New Username">
+                                    <button onclick="changeUsername()">✏️ Change
+                                        Username</button>
+                                </div>
+
+                                <!-- Change Profile Picture -->
+                                <div class="mod-tool-item">
+                                    <label>Change Profile Picture (Mii ID):</label>
+                                    <input type="text" id="newPfp"
+                                        value="<%= user.miiPfp %>" placeholder="Mii ID">
+                                    <button onclick="changeUserPfp()">🖼️ Change
+                                        PFP</button>
+                                </div>
+
                             </div>
                         </div>
-                        <p><%= miis[i].desc && miis[i].desc.length > 75 ? miis[i].desc.slice(0,73) + "..." : miis[i].desc %></p>
                     </div>
-                    <% } %>
-                </div>
-                <% } else { %>
-                <div class="empty-state">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 96 960 960">
-                        <path d="M480 976q-33 0-56.5-23.5T400 896q0-33 23.5-56.5T480 816q33 0 56.5 23.5T560 896q0 33-23.5 56.5T480 976Zm0-240q-33 0-56.5-23.5T400 656V256q0-33 23.5-56.5T480 176q33 0 56.5 23.5T560 256v400q0 33-23.5 56.5T480 736Z"/>
-                    </svg>
-                    <h3>No Miis Yet</h3>
-                    <p>This user hasn't uploaded any Miis.</p>
-                </div>
                 <% } %>
-            </div>
-        </div>
-        <div class="browse-featured-miis">
-            <!--Higlighted Mii-->
-            <!--svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" version="1.1" class="crown"><path d="M896 708.757333v101.866667A106.538667 106.538667 0 0 1 789.418667 917.333333H234.581333A106.581333 106.581333 0 0 1 128 810.624v-101.866667l-82.858667-367.573333c-14.4-75.178667 47.317333-113.344 107.392-68.48l157.504 117.717333c7.722667 5.76 13.888 4.309333 18.133334-4.117333l116.394666-231.957333c31.914667-63.594667 102.976-63.530667 134.848 0l116.416 231.957333c4.266667 8.448 10.389333 9.877333 18.133334 4.117333l157.504-117.717333c60.074667-44.885333 121.813333-6.784 107.392 68.48L896 708.736zM204.8 661.333333h614.4l65.92-292.309333-120.106667 89.749333c-50.197333 37.525333-117.333333 21.824-145.450666-34.197333L512 210.24l-107.584 214.336c-28.074667 55.957333-95.232 71.722667-145.450667 34.197333l-120.064-89.728L204.778667 661.333333z m8.533333 149.290667A21.248 21.248 0 0 0 234.581333 832h554.837334A21.205333 21.205333 0 0 0 810.666667 810.624V746.666667H213.333333v63.957333z" fill=""/></svg-->
-            <div class="title-container">
-                <h2>Highlighted Mii</h2>
-                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAScAAAAyCAYAAAAeNh3dAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYxIDY0LjE0MDk0OSwgMjAxMC8xMi8wNy0xMDo1NzowMSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNS4xIE1hY2ludG9zaCIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDowN0Q4NEI4MEYyRjUxMUUyQkIyQzgyMzFDMDNCRTc0OSIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDowN0Q4NEI4MUYyRjUxMUUyQkIyQzgyMzFDMDNCRTc0OSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkM5RDJFRTU3RjBCRjExRTJCQjJDODIzMUMwM0JFNzQ5IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkM5RDJFRTU4RjBCRjExRTJCQjJDODIzMUMwM0JFNzQ5Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+wjmikgAABsNJREFUeNrsnb9v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" height='20' width='205' />
-            </div>
-            <div class="mii-card">
-                <% if(users[thisUser].roles.includes['moderator']){ %>
-                    <input type="text" placeholder="New Highlighted Mii ID?" id="highlightedMiiID"> <input type="button" onclick="highlightedMiiChange()" value="Change Highlighted Mii">
-                <% } %>
-                <a href='/mii?id=<%= highlightedMii.id %>'><img src="miiImgs/<%= highlightedMii.id %>.jpg"></a>
-                <div class="flex">
-                    <div>
-                        <h3><%= highlightedMii.meta.name %></h3>
-                        <a><%= highlightedMii.uploader %></a>
-                    </div>
-                    <% if(!users[thisUser].votedFor.includes(highlightedMii)&&!users[thisUser].submissions.includes(highlightedMii)){ %>
-                        <svg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 96 960 960" width="36px" height="36px" class="like" viewBox="0 0 24 24" fill="#000000"><path d="m480 935-41-37q-105.768-97.121-174.884-167.561Q195 660 154 604.5T96.5 504Q80 459 80 413q0-90.155 60.5-150.577Q201 202 290 202q57 0 105.5 27t84.5 78q42-54 89-79.5T670 202q89 0 149.5 60.423Q880 322.845 880 413q0 46-16.5 91T806 604.5Q765 660 695.884 730.439 626.768 800.879 521 898l-41 37Zm0-79q101.236-92.995 166.618-159.498Q712 630 750.5 580t54-89.135q15.5-39.136 15.5-77.72Q820 347 778 304.5T670.225 262q-51.524 0-95.375 31.5Q531 325 504 382h-49q-26-56-69.85-88-43.851-32-95.375-32Q224 262 182 304.5t-42 108.816Q140 452 155.5 491.5t54 90Q248 632 314 698t166 158Zm0-297Z"/></svg>
+
+                <!-- Profile Content -->
+                <div class="profile-content">
+                    <h2 class="profile-section-title">
+                        <%= user.name %>'s Miis
+                    </h2>
+
+                    <% if(displayedMiis.length> 0) { %>
+                        <div id="browse-miis">
+                            <% for(var i=0; i<displayedMiis.length && i<50; i++){ %>
+                                <div class="mii-card" id="<%= displayedMiis[i].id %>">
+                                    <a href="<%= '/mii?id='+displayedMiis[i].id %>">
+                                        <img src="miiImgs/<%= displayedMiis[i].id %>.jpg" alt="<%= displayedMiis[i].meta?.name || displayedMiis[i].name %>">
+                                    </a>
+                                    <div class="flex">
+                                        <div>
+                                            <h3>
+                                                <%= displayedMiis[i].meta?.name || displayedMiis[i].name %>
+                                            </h3>
+                                            <a href="<%= '/user?user='+encodeURIComponent(displayedMiis[i].uploader) %>"><%= displayedMiis[i].uploader %></a>
+                                        </div>
+                                    </div>
+                                    <p>
+                                        <%= displayedMiis[i].desc && displayedMiis[i].desc.length> 75 ? displayedMiis[i].desc.slice(0,73) + "..." : displayedMiis[i].desc %>
+                                    </p>
+                                </div>
+                            <% } %>
+                        </div>
                     <% } else { %>
-                        <svg class="like" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M13.35 20.13c-.76.69-1.93.69-2.69-.01l-.11-.1C5.3 15.27 1.87 12.16 2 8.28c.06-1.7.93-3.33 2.34-4.29 2.64-1.8 5.9-.96 7.66 1.1 1.76-2.06 5.02-2.91 7.66-1.1 1.41.96 2.28 2.59 2.34 4.29.14 3.88-3.3 6.99-8.55 11.76l-.1.09z"/></svg>
+                        <div class="empty-state">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 96 960 960">
+                                <path d="M480 976q-33 0-56.5-23.5T400 896q0-33 23.5-56.5T480 816q33 0 56.5 23.5T560 896q0 33-23.5 56.5T480 976Zm0-240q-33 0-56.5-23.5T400 656V256q0-33 23.5-56.5T480 176q33 0 56.5 23.5T560 256v400q0 33-23.5 56.5T480 736Z" />
+                            </svg>
+                            <h3>No Miis Yet</h3>
+                            <p>This user hasn't uploaded any Miis.</p>
+                        </div>
                     <% } %>
                 </div>
-                <p><%= highlightedMii.desc.length>75?highlightedMii.desc.slice(0,73)+"...":highlightedMii.desc %></p>
             </div>
-            <br>
-            <!-- Average Mii -->
-            <div class="title-container">
-                <h2>Average Mii</h2>
-                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAScAAAAyCAYAAAAeNh3dAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYxIDY0LjE0MDk0OSwgMjAxMC8xMi8wNy0xMDo1NzowMSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNS4xIE1hY2ludG9zaCIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDowN0Q4NEI4MEYyRjUxMUUyQkIyQzgyMzFDMDNCRTc0OSIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDowN0Q4NEI4MUYyRjUxMUUyQkIyQzgyMzFDMDNCRTc0OSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkM5RDJFRTU3RjBCRjExRTJCQjJDODIzMUMwM0JFNzQ5IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkM5RDJFRTU4RjBCRjExRTJCQjJDODIzMUMwM0JFNzQ5Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+wjmikgAABsNJREFUeNrsnb9v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" height='20' width='205' />
-            </div>
-            <div class="mii-card">
-                <a href='/mii?id=average'><img src="miiImgs/average.jpg"></a>
-                <div class="flex">
-                    <div>
-                        <h3><%= averageMii.general.gender>0?"Jane":"John" %> Doe</h3>
-                        <a>Everyone</a>
-                    </div>
-                </div>
-                <p>The most common or average features and placements of those features across all Miis on the website</p>
-            </div>
+            <%- partials.featuredMiis %>
         </div>
-    </div>
-    
-    <footer>
-        <ul>
-            <li><a href="mailto:kestron@kestron.com">Contact</a></li>
-            <li><a href="/donate">Donate</a></li>
-            <li><a href='https://discord.gg/k3yVkrrvez'>Discord</a></li>
-        </ul>
-    </footer>
-    
-    <script src="global.js"></script>
 
-    <% if(users[thisUser] && (users[thisUser].roles.includes('moderator') || users[thisUser].roles.includes('administrator'))) { %>
-    <script>
-        const targetUsername = '<%= user.name %>';
+        <%- partials.footer %>
 
-        function toggleModTools() {
-            const content = document.getElementById('modToolsContent');
-            const arrow = document.getElementById('modToolsArrow');
-            
-            content.classList.toggle('expanded');
-            arrow.classList.toggle('rotated');
-        }
+        <script src="global.js"></script>
 
-        async function updateUserRoles() {
-            const checkboxes = document.querySelectorAll('.role-checkboxes input[type="checkbox"]');
-            const selectedRoles = Array.from(checkboxes)
-                .filter(cb => cb.checked)
-                .map(cb => cb.value);
-            
-            // Always include basic role if no roles selected
-            if (selectedRoles.length === 0) {
-                selectedRoles.push('basic');
-            }
-            
-            const confirmed = confirm(`Update ${targetUsername}'s roles to:\n${selectedRoles.join(', ')}\n\nAre you sure?`);
-            if (!confirmed) return;
+        <% if(users[thisUser] && (users[thisUser].roles.includes('moderator') ||
+            users[thisUser].roles.includes('administrator'))) { %>
+            <script>
+                const targetUsername = '<%= user.name %>';
 
-            try {
-                // Remove all current non-basic roles
-                const currentRoles = "<%= JSON.stringify(user.roles || (user.role ? [user.role] : ['basic'])) %>";
-                
-                // Calculate roles to remove
-                const rolesToRemove = currentRoles.filter(r => r !== 'basic' && !selectedRoles.includes(r));
-                
-                // Calculate roles to add
-                const rolesToAdd = selectedRoles.filter(r => !currentRoles.includes(r));
-                
-                // Remove old roles
-                for (const role of rolesToRemove) {
-                    const response = await fetch('/removeUserRole', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username: targetUsername, role })
-                    });
-                    const result = await response.json();
-                    if (!result.okay) {
-                        alert(`Error removing role ${role}: ${result.error}`);
-                        return;
+                function toggleModTools() {
+                    const content = document.getElementById('modToolsContent');
+                    const arrow = document.getElementById('modToolsArrow');
+
+                    content.classList.toggle('expanded');
+                    arrow.classList.toggle('rotated');
+                }
+
+                async function updateUserRoles() {
+                    const checkboxes = document.querySelectorAll('.role-checkboxes input[type="checkbox"]');
+                    const selectedRoles = Array.from(checkboxes)
+                        .filter(cb => cb.checked)
+                        .map(cb => cb.value);
+
+                    // Always include basic role if no roles selected
+                    if (selectedRoles.length === 0) {
+                        selectedRoles.push('basic');
+                    }
+
+                    const confirmed = confirm(`Update ${targetUsername}'s roles to:\n${selectedRoles.join(', ')}\n\nAre you sure?`);
+                    if (!confirmed) return;
+
+                    try {
+                        // Remove all current non-basic roles
+                        const currentRoles = "<%= JSON.stringify(user.roles || (user.role ? [user.role] : ['basic'])) %>";
+
+                        // Calculate roles to remove
+                        const rolesToRemove = currentRoles.filter(r => r !== 'basic' && !selectedRoles.includes(r));
+
+                        // Calculate roles to add
+                        const rolesToAdd = selectedRoles.filter(r => !currentRoles.includes(r));
+
+                        // Remove old roles
+                        for (const role of rolesToRemove) {
+                            const response = await fetch('/removeUserRole', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ username: targetUsername, role })
+                            });
+                            const result = await response.json();
+                            if (!result.okay) {
+                                alert(`Error removing role ${role}: ${result.error}`);
+                                return;
+                            }
+                        }
+
+                        // Add new roles
+                        for (const role of rolesToAdd) {
+                            const response = await fetch('/addUserRole', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ username: targetUsername, role })
+                            });
+                            const result = await response.json();
+                            if (!result.okay) {
+                                alert(`Error adding role ${role}: ${result.error}`);
+                                return;
+                            }
+                        }
+
+                        alert('Roles updated successfully!');
+                        location.reload();
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Failed to update roles');
                     }
                 }
-                
-                // Add new roles
-                for (const role of rolesToAdd) {
-                    const response = await fetch('/addUserRole', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username: targetUsername, role })
-                    });
-                    const result = await response.json();
-                    if (!result.okay) {
-                        alert(`Error adding role ${role}: ${result.error}`);
+
+                async function tempBanUser() {
+                    const hours = parseInt(document.getElementById('banHours').value);
+                    const reason = document.getElementById('tempBanReason').value;
+
+                    if (!hours || hours < 1) {
+                        alert('Please enter a valid number of hours');
                         return;
                     }
+
+                    const confirmed = confirm(`Are you sure you want to temporarily ban ${targetUsername} for ${hours} hours?\n\nReason: ${reason || 'No reason provided'}`);
+                    if (!confirmed) return;
+
+                    try {
+                        const response = await fetch('/tempBanUser', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username: targetUsername, hours, reason })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.okay) {
+                            alert(`User temporarily banned for ${hours} hours`);
+                            location.reload();
+                        } else {
+                            alert(`Error: ${result.error}`);
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Failed to ban user');
+                    }
                 }
-                
-                alert('Roles updated successfully!');
-                location.reload();
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Failed to update roles');
-            }
-        }
 
-    async function tempBanUser() {
-        const hours = parseInt(document.getElementById('banHours').value);
-        const reason = document.getElementById('tempBanReason').value;
-        
-        if (!hours || hours < 1) {
-            alert('Please enter a valid number of hours');
-            return;
-        }
+                async function permBanUser() {
+                    const reason = document.getElementById('permBanReason').value;
 
-        const confirmed = confirm(`Are you sure you want to temporarily ban ${targetUsername} for ${hours} hours?\n\nReason: ${reason || 'No reason provided'}`);
-        if (!confirmed) return;
+                    const confirmed = confirm(`⚠️ WARNING ⚠️\n\nAre you ABSOLUTELY SURE you want to PERMANENTLY BAN ${targetUsername}?\n\nThis will:\n- Delete their account\n- Delete ALL their Miis (${'<%= displayedMiis.length %>'})\n- Ban their IP address from creating new accounts\n\nThis action CANNOT be undone!\n\nReason: ${reason || 'No reason provided'}`);
 
-        try {
-            const response = await fetch('/tempBanUser', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: targetUsername, hours, reason })
-            });
+                    if (!confirmed) return;
 
-            const result = await response.json();
-            
-            if (result.okay) {
-                alert(`User temporarily banned for ${hours} hours`);
-                location.reload();
-            } else {
-                alert(`Error: ${result.error}`);
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Failed to ban user');
-        }
-    }
+                    const doubleCheck = prompt(`Type "PERMANENT BAN" to confirm:`);
+                    if (doubleCheck !== 'PERMANENT BAN') {
+                        alert('Permanent ban cancelled.');
+                        return;
+                    }
 
-    async function permBanUser() {
-        const reason = document.getElementById('permBanReason').value;
-        
-        const confirmed = confirm(`⚠️ WARNING ⚠️\n\nAre you ABSOLUTELY SURE you want to PERMANENTLY BAN ${targetUsername}?\n\nThis will:\n- Delete their account\n- Delete ALL their Miis (${'<%= miis.length %>'})\n- Ban their IP address from creating new accounts\n\nThis action CANNOT be undone!\n\nReason: ${reason || 'No reason provided'}`);
-        
-        if (!confirmed) return;
+                    try {
+                        const response = await fetch('/permBanUser', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username: targetUsername, reason })
+                        });
 
-        const doubleCheck = prompt(`Type "PERMANENT BAN" to confirm:`);
-        if (doubleCheck !== 'PERMANENT BAN') {
-            alert('Permanent ban cancelled.');
-            return;
-        }
+                        const result = await response.json();
 
-        try {
-            const response = await fetch('/permBanUser', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: targetUsername, reason })
-            });
+                        if (result.okay) {
+                            alert('User permanently banned and deleted');
+                            window.location.href = '/';
+                        } else {
+                            alert(`Error: ${result.error}`);
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Failed to permanently ban user');
+                    }
+                }
 
-            const result = await response.json();
-            
-            if (result.okay) {
-                alert('User permanently banned and deleted');
-                window.location.href = '/';
-            } else {
-                alert(`Error: ${result.error}`);
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Failed to permanently ban user');
-        }
-    }
+                async function deleteAllUserMiis() {
+                    const confirmed = confirm(`Are you sure you want to delete ALL ${'<%= displayedMiis.length %>'} Miis from ${targetUsername}?\n\nThis action CANNOT be undone!`);
+                    if (!confirmed) return;
 
-    async function deleteAllUserMiis() {
-        const confirmed = confirm(`Are you sure you want to delete ALL ${'<%= miis.length %>'} Miis from ${targetUsername}?\n\nThis action CANNOT be undone!`);
-        if (!confirmed) return;
+                    const doubleCheck = prompt(`Type "DELETE ALL" to confirm:`);
+                    if (doubleCheck !== 'DELETE ALL') {
+                        alert('Deletion cancelled.');
+                        return;
+                    }
 
-        const doubleCheck = prompt(`Type "DELETE ALL" to confirm:`);
-        if (doubleCheck !== 'DELETE ALL') {
-            alert('Deletion cancelled.');
-            return;
-        }
+                    try {
+                        const response = await fetch('/deleteAllUserMiis', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username: targetUsername })
+                        });
 
-        try {
-            const response = await fetch('/deleteAllUserMiis', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: targetUsername })
-            });
+                        const result = await response.json();
 
-            const result = await response.json();
-            
-            if (result.okay) {
-                alert(`Deleted ${result.deletedCount} Miis`);
-                location.reload();
-            } else {
-                alert(`Error: ${result.error}`);
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Failed to delete Miis');
-        }
-    }
+                        if (result.okay) {
+                            alert(`Deleted ${result.deletedCount} Miis`);
+                            location.reload();
+                        } else {
+                            alert(`Error: ${result.error}`);
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Failed to delete Miis');
+                    }
+                }
 
-    async function changeUsername() {
-        const newUsername = document.getElementById('newUsername').value;
-        
-        if (!newUsername || newUsername === targetUsername) {
-            alert('Please enter a new username');
-            return;
-        }
+                async function changeUsername() {
+                    const newUsername = document.getElementById('newUsername').value;
 
-        const confirmed = confirm(`Are you sure you want to change username from "${targetUsername}" to "${newUsername}"?`);
-        if (!confirmed) return;
+                    if (!newUsername || newUsername === targetUsername) {
+                        alert('Please enter a new username');
+                        return;
+                    }
 
-        try {
-            const response = await fetch('/changeUsername', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ oldUsername: targetUsername, newUsername })
-            });
+                    const confirmed = confirm(`Are you sure you want to change username from "${targetUsername}" to "${newUsername}"?`);
+                    if (!confirmed) return;
 
-            const result = await response.json();
-            
-            if (result.okay) {
-                alert('Username changed successfully!');
-                window.location.href = `/user?user=${encodeURIComponent(newUsername)}`;
-            } else {
-                alert(`Error: ${result.error}`);
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Failed to change username');
-        }
-    }
+                    try {
+                        const response = await fetch('/changeUsername', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ oldUsername: targetUsername, newUsername })
+                        });
 
-    async function changeUserPfp() {
-        const newPfp = document.getElementById('newPfp').value;
-        
-        if (!newPfp) {
-            alert('Please enter a Mii ID');
-            return;
-        }
+                        const result = await response.json();
 
-        const confirmed = confirm(`Are you sure you want to change ${targetUsername}'s profile picture to Mii ID: ${newPfp}?`);
-        if (!confirmed) return;
+                        if (result.okay) {
+                            alert('Username changed successfully!');
+                            window.location.href = `/user?user=${encodeURIComponent(newUsername)}`;
+                        } else {
+                            alert(`Error: ${result.error}`);
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Failed to change username');
+                    }
+                }
 
-        try {
-            const response = await fetch('/changeUserPfp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: targetUsername, miiId: newPfp })
-            });
+                async function changeUserPfp() {
+                    const newPfp = document.getElementById('newPfp').value;
 
-            const result = await response.json();
-            
-            if (result.okay) {
-                alert('Profile picture changed successfully!');
-                location.reload();
-            } else {
-                alert(`Error: ${result.error}`);
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Failed to change profile picture');
-        }
-    }
-    </script>
-    <% } %>
-</body>
+                    if (!newPfp) {
+                        alert('Please enter a Mii ID');
+                        return;
+                    }
+
+                    const confirmed = confirm(`Are you sure you want to change ${targetUsername}'s profile picture to Mii ID: ${newPfp}?`);
+                    if (!confirmed) return;
+
+                    try {
+                        const response = await fetch('/changeUserPfp', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username: targetUsername, miiId: newPfp })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.okay) {
+                            alert('Profile picture changed successfully!');
+                            location.reload();
+                        } else {
+                            alert(`Error: ${result.error}`);
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Failed to change profile picture');
+                    }
+                }
+            </script>
+        <% } %>
+    </body>
 </html>

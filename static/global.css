@@ -53,6 +53,9 @@ header {
     text-align: center;
     padding: 0 var(--gutter-size);
 }
+header img{
+    width:40%;
+}
 
 #banner {
     width: 50%;

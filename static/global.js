@@ -18,3 +18,13 @@ function deleteMii(id){
 		document.getElementById(id).remove();
 	}
 }
+function highlightedMiiChange(){
+    fetch("/changehighlightedMii?id="+document.getElementById("highlightedMiiID").value).then(d=>d.json()).then(d=>{
+        if(d.okay){
+            location.reload();
+        }
+        else{
+            alert(d.msg);
+        }
+    });
+}
