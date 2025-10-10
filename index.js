@@ -715,6 +715,16 @@ site.get('/search', (req, res) => {
         res.send(str)
     });
 });
+site.get('/transferInstructions', (req, res) => {
+    ejs.renderFile('./ejsFiles/transferInstructions.ejs', getSendables(req), {}, function(err, str) {
+        if (err) {
+            res.send(err);
+            console.log(err);
+            return;
+        }
+        res.send(str)
+    });
+});
 site.get('/upload', (req, res) => {
     ejs.renderFile('./ejsFiles/upload.ejs', getSendables(req), {}, function(err, str) {
         if (err) {
@@ -798,6 +808,9 @@ site.get('/deleteMii', (req, res) => {
                     }
                 }]
             }));
+            if(mii.uploader!==req.cookies.username&&mii.uploader!=="Nintendo"){
+                sendEmail(storage.users[mii.uploader].email,`${mii.meta.name} Deleted - InfiniMii`,`Hi ${mii.uploader}, a moderator deleted ${mii.name}. We ask that Miis posted to this website are respectful, free of curse words and slurs, and devoid of anything that can be considered NSFW. Additionally, Miis uploaded should be one's own, and not copied from another source. If you were attempting to upload an official Mii, you can reply to this email to discuss being made a Researcher, which are allowed to upload Official Miis.\n\nIf you are unsure why your Mii was deleted, you may reply to this email to receive support. Understand that repeated violations of rules may result in a ban from the site.`);
+            }
             storage.miiIds.splice(storage.miiIds.indexOf(req.query.id), 1);
             delete storage.miis[req.query.id];
             fs.unlinkSync("./static/miiImgs/" + req.query.id + ".jpg");
@@ -1033,6 +1046,9 @@ site.post('/addUserRole', async (req, res) => {
                 ]
             }]
         }));
+        if(['researcher','moderator','administrator'].includes(role.toLowerCase())){
+            sendEmail(targetUser.email,`New Role Added - InfiniMii`,`Congratulations ${username}, you were made a ${role[0].toUpperCase()}${role.slice(1,role.length)} on InfiniMii!`);
+        }
 
         res.json({ okay: true, roles: targetUser.roles });
     } catch (e) {
@@ -1159,6 +1175,7 @@ site.post('/tempBanUser', async (req, res) => {
                 ]
             }]
         }));
+        sendEmail(targetUser.email,`Ban - InfiniMii`,`Hi ${username}, you were banned on InfiniMii for the next ${hours}. ${reason?`Reason: ${reason}`:`No reason was specified at this time.`} Understand that repeated violations may result in a permanent ban and account deletion. You may reply to this email for support.`);
 
         res.json({ okay: true });
     } catch (e) {
@@ -1257,6 +1274,7 @@ site.post('/permBanUser', async (req, res) => {
                 ]
             }]
         }));
+        sendEmail(targetUser.email,`Permanent Ban - InfiniMii`,`Hi ${username}, due to repeated and/or serious violations of rules on InfiniMii, you have been permanently banned from the website. ${reason?`Reason: ${reason}`:`No reason was provided at this time.`} This will prevent you from making any new accounts in the future, and all uploaded Miis have been deleted. If you feel this is in error, you may reply to this email to receive support.`)
 
         res.json({ okay: true });
     } catch (e) {
@@ -1335,6 +1353,7 @@ site.post('/deleteAllUserMiis', async (req, res) => {
                 ]
             }]
         }));
+        //There is very very little reason this will not precede a ban, so we're not going to bother emailing the user for this one.
 
         res.json({ okay: true, deletedCount });
     } catch (e) {
@@ -1407,6 +1426,7 @@ site.post('/changeUsername', async (req, res) => {
                 ]
             }]
         }));
+        sendEmail(user.email,`Username Changed - InfiniMii`,`Hi ${oldUsername}, a moderator has changed your username to ${newUsername}. This will be what you login with moving forward. You can reply to this email to receive support.`);
 
         res.json({ okay: true });
     } catch (e) {
@@ -1847,6 +1867,10 @@ site.post('/changeEmail', async (req, res) => {
         }
 
         user.email = newEmail;
+        user.verified=false;
+        var token = genToken();
+        let link = "https://miis.kestron.com/verify?user=" + encodeURIComponent(req.body.username) + "&token=" + encodeURIComponent(token);
+        user.verificationToken=hashPassword(token, hashed.salt).hash;
         save();
 
         makeReport(JSON.stringify({
@@ -1860,15 +1884,14 @@ site.post('/changeEmail', async (req, res) => {
                         name: 'User',
                         value: req.cookies.username,
                         inline: true
-                    },
-                    {
-                        name: 'New Email',
-                        value: newEmail,
-                        inline: true
                     }
                 ]
             }]
         }));
+
+        sendEmail(oldEmail, "InfiniMii Verification", `Hi ${req.cookies.username}, we received a request to change your email on InfiniMii. If this was not you, please reply to this email to receive support.`);
+        sendEmail(newEmail, "InfiniMii Verification", `Hi ${req.cookies.username}, we received a request to change your email on InfiniMii. Please verify your email by clicking this link: ${link}. If this was not you, please reply to this email to receive support.`);
+
 
         res.json({ okay: true });
     } catch (e) {
@@ -1924,6 +1947,7 @@ site.post('/changePassword', async (req, res) => {
                 ]
             }]
         }));
+        sendEmail(user.email,`Password Changed - InfiniMii`,`Hi ${req.cookies.username}, your password was recently changed on InfiniMii. If this was not you, you can reply to this email to receive support.`);
 
         res.json({ okay: true });
     } catch (e) {
@@ -1991,7 +2015,7 @@ site.post('/deleteAllMyMiis', async (req, res) => {
                 ]
             }]
         }));
-
+        sendEmail(user.email,`All Miis Deleted - InfiniMii`,`Hi ${req.cookies.username}, we received a request to delete all of your Miis. If this wasn't you, reply to this email to receive support.`);
         res.json({ okay: true, deletedCount });
     } catch (e) {
         console.error('Error deleting all user Miis:', e);
@@ -2071,7 +2095,7 @@ site.post('/deleteAccount', async (req, res) => {
                 ]
             }]
         }));
-
+        sendEmail(user.email,`Account Deleted - InfiniMii`,`Hi ${req.cookies.username}, we received a request to delete your account. We're sorry to see you go! If this wasn't you, please reply to this email to receive support.`)
         res.json({ okay: true });
     } catch (e) {
         console.error('Error deleting account:', e);
@@ -2238,7 +2262,7 @@ site.post('/signup', (req, res) => {
         pass: hashed.hash,
         verificationToken: hashPassword(token, hashed.salt).hash,
         creationDate: Date.now(),
-        email: req.body.email, // CHANGED: Store email directly, not hashed
+        email: req.body.email,
         votedFor: [],
         submissions: [],
         miiPfp: "00000",
