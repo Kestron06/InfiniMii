@@ -1,12 +1,5 @@
 # TODO
  - Add actual pages for error messages
- - Make Official Mii uploads feature games or other locations they were present, browse by game or location or console
- - Add Recreation Instructions for the Miis
- - Distinguish Uploaded and Published Miis
-   - Able to upload Miis that are saved for you privately
-      - Allow up to a certain number of these per user, things like family and friends you want saved between consoles without being public  
-   - Published Miis
-      - No cap on published Miis you can have, these are in the public space for everyone to see.
 
 ## Events/Games
  - CheckMiiOut

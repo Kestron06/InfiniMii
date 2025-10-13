@@ -12,6 +12,7 @@ var multer = require('multer');
 var upload = multer({ dest: 'uploads/' });
 var globalSalt = process.env.salt;
 process.env=require("./env.json");
+const PRIVATE_MII_LIMIT = process.env.privateMiiLimit;
 
 var partials={};
 fs.readdirSync("./partials").forEach(file=>{
@@ -78,6 +79,13 @@ function canModerate(user) {
            hasRole(user, ROLES.ADMINISTRATOR);
 }
 
+// Permission to edit official Miis
+function canEditOfficial(user) {
+    return hasRole(user, ROLES.RESEARCHER) || 
+           hasRole(user, ROLES.MODERATOR) ||
+           hasRole(user, ROLES.ADMINISTRATOR);
+}
+
 function isAdmin(user) {
     return hasRole(user, ROLES.ADMINISTRATOR);
 }
@@ -123,7 +131,137 @@ function removeRole(user, role) {
     // Update legacy moderator flag
     user.roles.includes('moderator') = canModerate(user);
 }
+// Category Tree Helper Functions
 
+// Find a category node by path
+function findCategoryByPath(path, tree = storage.officialCategories.categories) {
+    if (!path) return null;
+    
+    const parts = path.split('/');
+    let current = tree;
+    
+    for (const part of parts) {
+        const found = current.find(node => node.name === part);
+        if (!found) return null;
+        if (parts.indexOf(part) === parts.length - 1) return found;
+        current = found.children;
+    }
+    
+    return null;
+}
+
+// Get all leaf categories (categories with no children) as flat array
+function getAllLeafCategories(tree = storage.officialCategories.categories, result = []) {
+    tree.forEach(node => {
+        if (node.children && node.children.length > 0) {
+            getAllLeafCategories(node.children, result);
+        } else {
+            result.push(node);
+        }
+    });
+    return result;
+}
+
+// Get all categories (including parents) as flat array with paths
+function getAllCategoriesFlat(tree = storage.officialCategories.categories, result = []) {
+    tree.forEach(node => {
+        result.push(node);
+        if (node.children && node.children.length > 0) {
+            getAllCategoriesFlat(node.children, result);
+        }
+    });
+    return result;
+}
+
+// Recursively update paths after a rename
+function updateCategoryPaths(node, parentPath = '') {
+    node.path = parentPath ? `${parentPath}/${node.name}` : node.name;
+    if (node.children && node.children.length > 0) {
+        node.children.forEach(child => {
+            updateCategoryPaths(child, node.path);
+        });
+    }
+}
+
+// Find parent of a category by path
+function findParentByChildPath(path, tree = storage.officialCategories.categories, parent = null) {
+    if (!path) return null;
+    
+    for (const node of tree) {
+        if (node.path === path) {
+            return parent;
+        }
+        if (node.children && node.children.length > 0) {
+            const found = findParentByChildPath(path, node.children, node);
+            if (found) return found;
+        }
+    }
+    
+    return null;
+}
+
+// Rename category in all Miis that use it
+function renameCategoryInAllMiis(oldPath, newPath) {
+    let count = 0;
+    
+    // Update published Miis
+    Object.values(storage.miis).forEach(mii => {
+        if (mii.official && mii.officialCategories && mii.officialCategories.includes(oldPath)) {
+            const index = mii.officialCategories.indexOf(oldPath);
+            mii.officialCategories[index] = newPath;
+            count++;
+        }
+    });
+    
+    // Update private Miis
+    if (storage.privateMiis) {
+        Object.values(storage.privateMiis).forEach(mii => {
+            if (mii.official && mii.officialCategories && mii.officialCategories.includes(oldPath)) {
+                const index = mii.officialCategories.indexOf(oldPath);
+                mii.officialCategories[index] = newPath;
+                count++;
+            }
+        });
+    }
+    
+    return count;
+}
+
+// Remove category from all Miis
+function removeCategoryFromAllMiis(path) {
+    let count = 0;
+    
+    // Update published Miis
+    Object.values(storage.miis).forEach(mii => {
+        if (mii.official && mii.officialCategories && mii.officialCategories.includes(path)) {
+            mii.officialCategories = mii.officialCategories.filter(c => c !== path);
+            count++;
+        }
+    });
+    
+    // Update private Miis
+    if (storage.privateMiis) {
+        Object.values(storage.privateMiis).forEach(mii => {
+            if (mii.official && mii.officialCategories && mii.officialCategories.includes(path)) {
+                mii.officialCategories = mii.officialCategories.filter(c => c !== path);
+                count++;
+            }
+        });
+    }
+    
+    return count;
+}
+
+// Get all descendant paths (for deletion)
+function getAllDescendantPaths(node, result = []) {
+    result.push(node.path);
+    if (node.children && node.children.length > 0) {
+        node.children.forEach(child => {
+            getAllDescendantPaths(child, result);
+        });
+    }
+    return result;
+}
 function hashIP(ip) {
     return crypto.createHash('sha256').update(ip + globalSalt).digest('hex');
 }
@@ -494,10 +632,185 @@ site.use((req, res, next) => {
     }
     next();
 });
+// Serve private Mii images with authentication
+site.use('/privateMiiImgs', (req, res, next) => {
+    const miiId = req.path.split('/').pop().split('.')[0];
+    
+    if (storage.privateMiis && storage.privateMiis[miiId]) {
+        const privateMii = storage.privateMiis[miiId];
+        const user = storage.users[req.cookies.username];
+        const isModerator = user && canModerate(user);
+        const isOwner = privateMii.uploader === req.cookies.username;
+        
+        if (isOwner || isModerator) {
+            next();
+        } else {
+            res.status(403).send('Access denied');
+        }
+    } else {
+        next();
+    }
+});
+site.use('/privateMiiQRs', (req, res, next) => {
+    const miiId = req.path.split('/').pop().split('.')[0];
+    
+    if (storage.privateMiis && storage.privateMiis[miiId]) {
+        const privateMii = storage.privateMiis[miiId];
+        const user = storage.users[req.cookies.username];
+        const isModerator = user && canModerate(user);
+        const isOwner = privateMii.uploader === req.cookies.username;
+        
+        if (isOwner || isModerator) {
+            next();
+        } else {
+            res.status(403).send('Access denied');
+        }
+    } else {
+        next();
+    }
+});
 
 site.listen(8080, async () => {
-    // - All actions here should be finished before we say Online, so as to help limit chances for data corruption, so tasks will be made synchronous even where they need not be -
     console.log("Starting, do not stop...");
+    
+    // Initialize privateMiis storage if it doesn't exist
+    if (!storage.privateMiis) storage.privateMiis = {};
+    
+    // Ensure directories exist
+    if (!fs.existsSync('./static/privateMiiImgs')) {
+        fs.mkdirSync('./static/privateMiiImgs', { recursive: true });
+    }
+    if (!fs.existsSync('./static/privateMiiQRs')) {
+        fs.mkdirSync('./static/privateMiiQRs', { recursive: true });
+    }
+
+    // Migrate existing official Miis to have officialCategories array
+    Object.keys(storage.miis).forEach(miiId => {
+        const mii = storage.miis[miiId];
+        if (mii.official && !mii.officialCategories) {
+            mii.officialCategories = [];
+        }
+    });
+
+    console.log("Migration complete - all official Miis have officialCategories arrays");
+
+    // Initialize official categories structure with unlimited nesting
+if (!storage.officialCategories) {
+    storage.officialCategories = {
+        // Structure: { name: string, color: string, children: [...], path: string }
+        categories: [
+            {
+                name: "Games",
+                color: "#ff6b6b",
+                path: "Games",
+                children: [
+                    {
+                        name: "Wii Sports Series",
+                        color: "#ff8787",
+                        path: "Games/Wii Sports Series",
+                        children: [
+                            { name: "Wii Sports", color: "#ffa3a3", path: "Games/Wii Sports Series/Wii Sports", children: [] },
+                            { name: "Wii Sports Resort", color: "#ffa3a3", path: "Games/Wii Sports Series/Wii Sports Resort", children: [] },
+                            { name: "Wii Sports Club", color: "#ffa3a3", path: "Games/Wii Sports Series/Wii Sports Club", children: [] },
+                            { name: "Nintendo Switch Sports", color: "#ffa3a3", path: "Games/Wii Sports Series/Nintendo Switch Sports", children: [] }
+                        ]
+                    },
+                    {
+                        name: "Wii Play Series",
+                        color: "#ff8787",
+                        path: "Games/Wii Play Series",
+                        children: [
+                            { name: "Wii Play", color: "#ffa3a3", path: "Games/Wii Play Series/Wii Play", children: [] },
+                            { name: "Wii Play Motion", color: "#ffa3a3", path: "Games/Wii Play Series/Wii Play Motion", children: [] }
+                        ]
+                    },
+                    {
+                        name: "Wii Fit Series",
+                        color: "#ff8787",
+                        path: "Games/Wii Fit Series",
+                        children: [
+                            { name: "Wii Fit", color: "#ffa3a3", path: "Games/Wii Fit Series/Wii Fit", children: [] },
+                            { name: "Wii Fit Plus", color: "#ffa3a3", path: "Games/Wii Fit Series/Wii Fit Plus", children: [] },
+                            { name: "Wii Fit U", color: "#ffa3a3", path: "Games/Wii Fit Series/Wii Fit U", children: [] }
+                        ]
+                    },
+                    {
+                        name: "Wii Party Series",
+                        color: "#ff8787",
+                        path: "Games/Wii Party Series",
+                        children: [
+                            { name: "Wii Party", color: "#ffa3a3", path: "Games/Wii Party Series/Wii Party", children: [] },
+                            { name: "Wii Party U", color: "#ffa3a3", path: "Games/Wii Party Series/Wii Party U", children: [] }
+                        ]
+                    },
+                    {
+                        name: "Mario Kart Series",
+                        color: "#ff8787",
+                        path: "Games/Mario Kart Series",
+                        children: [
+                            { name: "Mario Kart Wii", color: "#ffa3a3", path: "Games/Mario Kart Series/Mario Kart Wii", children: [] },
+                            { name: "Mario Kart 7", color: "#ffa3a3", path: "Games/Mario Kart Series/Mario Kart 7", children: [] },
+                            { name: "Mario Kart 8", color: "#ffa3a3", path: "Games/Mario Kart Series/Mario Kart 8", children: [] }
+                        ]
+                    },
+                    {
+                        name: "Super Smash Bros. Series",
+                        color: "#ff8787",
+                        path: "Games/Super Smash Bros. Series",
+                        children: [
+                            { name: "Super Smash Bros. for 3DS/Wii U", color: "#ffa3a3", path: "Games/Super Smash Bros. Series/Super Smash Bros. for 3DS/Wii U", children: [] },
+                            { name: "Super Smash Bros. Ultimate", color: "#ffa3a3", path: "Games/Super Smash Bros. Series/Super Smash Bros. Ultimate", children: [] }
+                        ]
+                    },
+                    {
+                        name: "Tomodachi Series",
+                        color: "#ff8787",
+                        path: "Games/Tomodachi Series",
+                        children: [
+                            { name: "Tomodachi Collection", color: "#ffa3a3", path: "Games/Tomodachi Series/Tomodachi Collection", children: [] },
+                            { name: "Tomodachi Life", color: "#ffa3a3", path: "Games/Tomodachi Series/Tomodachi Life", children: [] }
+                        ]
+                    },
+                    { name: "Miitopia", color: "#ff8787", path: "Games/Miitopia", children: [] },
+                    { name: "Wii Music", color: "#ff8787", path: "Games/Wii Music", children: [] },
+                    { name: "Nintendo Land", color: "#ff8787", path: "Games/Nintendo Land", children: [] }
+                ]
+            },
+            {
+                name: "Consoles",
+                color: "#4ecdc4",
+                path: "Consoles",
+                children: [
+                    { name: "Wii", color: "#6ed9d0", path: "Consoles/Wii", children: [] },
+                    { name: "Nintendo DS", color: "#6ed9d0", path: "Consoles/Nintendo DS", children: [] },
+                    { name: "Nintendo 3DS", color: "#6ed9d0", path: "Consoles/Nintendo 3DS", children: [] },
+                    { name: "Wii U", color: "#6ed9d0", path: "Consoles/Wii U", children: [] },
+                    { name: "Nintendo Switch", color: "#6ed9d0", path: "Consoles/Nintendo Switch", children: [] }
+                ]
+            },
+            {
+                name: "Other",
+                color: "#95e1d3",
+                path: "Other",
+                children: [
+                    { name: "Promo Material", color: "#ade8dd", path: "Other/Promo Material", children: [] },
+                    { name: "E3 Demos", color: "#ade8dd", path: "Other/E3 Demos", children: [] },
+                    { name: "Internal/Debug", color: "#ade8dd", path: "Other/Internal/Debug", children: [] },
+                    { name: "System Defaults", color: "#ade8dd", path: "Other/System Defaults", children: [] }
+                ]
+            }
+        ]
+    };
+}
+
+console.log("Official categories initialized with nested structure");
+    
+    // Ensure privateMiis array for all users
+    Object.keys(storage.users).forEach(username => {
+        if (!storage.users[username].privateMiis) {
+            storage.users[username].privateMiis = [];
+        }
+    });
     
     // For Quickly Uploading Batches of Miis
     await Promise.all(
@@ -658,15 +971,45 @@ site.get('/recent', (req, res) => {
 });
 site.get('/official', (req, res) => {
     let toSend = getSendables(req);
-    toSend.displayedMiis = api("official",30);
-    toSend.title = "Official Miis - InfiniMii";
-    ejs.renderFile('./ejsFiles/miis.ejs', toSend, {}, function(err, str) {
+    
+    // Get all official Miis
+    let officialMiis = Object.values(storage.miis).filter(mii => mii.official);
+    
+    // Get all unique categories across all official Miis
+    const allCategories = new Set();
+    officialMiis.forEach(mii => {
+        if (mii.officialCategories && Array.isArray(mii.officialCategories)) {
+            mii.officialCategories.forEach(cat => allCategories.add(cat));
+        }
+    });
+    
+    // Sort categories alphabetically
+    toSend.availableCategories = Array.from(allCategories).sort();
+    
+    // Filter by category if specified
+    const filterCategory = req.query.category;
+    if (filterCategory) {
+        officialMiis = officialMiis.filter(mii => 
+            mii.officialCategories && mii.officialCategories.includes(filterCategory)
+        );
+        toSend.currentFilter = filterCategory;
+    }
+    
+    // Sort by votes
+    officialMiis.sort((a, b) => b.votes - a.votes);
+    
+    toSend.displayedMiis = officialMiis;
+    toSend.title = filterCategory 
+        ? `Official Miis - ${filterCategory} - InfiniMii`
+        : "Official Miis - InfiniMii";
+    
+    ejs.renderFile('./ejsFiles/official.ejs', toSend, {}, function(err, str) {
         if (err) {
             res.send(err);
             console.log(err);
             return;
         }
-        res.send(str)
+        res.send(str);
     });
 });
 site.get('/searchResults', (req, res) => {
@@ -748,55 +1091,112 @@ site.get('/deleteMii', (req, res) => {
             res.send("{'okay':false}");
             return;
         }
-        if (storage.users[req.cookies.username].submissions.includes(req.query.id) || storage.users[req.cookies.username].roles.includes('moderator')) {
-            var mii = storage.miis[req.query.id];
-            storage.users[mii.uploader].submissions.splice(storage.users[mii.uploader].submissions.indexOf(mii.id), 1);
-            var d = new Date();
-            makeReport(JSON.stringify({
-                embeds: [{
-                    "type": "rich",
-                    "title": (mii.official ? "Official " : "") + `Mii Deleted by ` + req.cookies.username,
-                    "description": mii.desc,
-                    "color": 0xff0000,
-                    "fields": [
-                        {
-                            "name": `Mii Name`,
-                            "value": mii.name,
-                            "inline": true
+        
+        const user = storage.users[req.cookies.username];
+        const isModerator = canModerate(user);
+        const miiId = req.query.id;
+        
+        // Check if it's a published Mii
+        if (storage.miis[miiId]) {
+            if (user.submissions.includes(miiId) || isModerator) {
+                var mii = storage.miis[miiId];
+                storage.users[mii.uploader].submissions.splice(storage.users[mii.uploader].submissions.indexOf(mii.id), 1);
+                var d = new Date();
+                makeReport(JSON.stringify({
+                    embeds: [{
+                        "type": "rich",
+                        "title": (mii.official ? "Official " : "") + `Published Mii Deleted by ` + req.cookies.username,
+                        "description": mii.desc,
+                        "color": 0xff0000,
+                        "fields": [
+                            {
+                                "name": `Mii Name`,
+                                "value": mii.name || mii.meta?.name,
+                                "inline": true
+                            },
+                            {
+                                "name": `${mii.official ? "Uploaded" : "Made"} by`,
+                                "value": `[${mii.uploader}](https://miis.kestron.com/user?user=${mii.uploader})`,
+                                "inline": true
+                            },
+                            {
+                                "name": `Mii Creator Name (embedded in Mii file)`,
+                                "value": mii.creatorName || mii.meta?.creatorName,
+                                "inline": true
+                            }
+                        ],
+                        "thumbnail": {
+                            "url": `https://miis.kestron.com/miiImgs/${mii.id}.jpg`,
+                            "height": 0,
+                            "width": 0
                         },
-                        {
-                            "name": `${mii.official ? "Uploaded" : "Made"} by`,
-                            "value": `[${mii.uploader}](https://miis.kestron.com/user?user=${mii.uploader})`,
-                            "inline": true
-                        },
-                        {
-                            "name": `Mii Creator Name (embedded in Mii file)`,
-                            "value": mii.creatorName,
-                            "inline": true
+                        "footer": {
+                            "text": `Deleted at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
                         }
-                    ],
-                    "thumbnail": {
-                        "url": `https://miis.kestron.com/miiImgs/${mii.id}.jpg`,
-                        "height": 0,
-                        "width": 0
-                    },
-                    "footer": {
-                        "text": `Deleted at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
-                    }
-                }]
-            }));
-            if(mii.uploader!==req.cookies.username&&mii.uploader!=="Nintendo"){
-                sendEmail(storage.users[mii.uploader].email,`${mii.meta.name} Deleted - InfiniMii`,`Hi ${mii.uploader}, a moderator deleted ${mii.name}. We ask that Miis posted to this website are respectful, free of curse words and slurs, and devoid of anything that can be considered NSFW. Additionally, Miis uploaded should be one's own, and not copied from another source. If you were attempting to upload an official Mii, you can reply to this email to discuss being made a Researcher, which are allowed to upload Official Miis.\n\nIf you are unsure why your Mii was deleted, you may reply to this email to receive support. Understand that repeated violations of rules may result in a ban from the site.`);
+                    }]
+                }));
+                storage.miiIds.splice(storage.miiIds.indexOf(miiId), 1);
+                delete storage.miis[miiId];
+                try { fs.unlinkSync("./static/miiImgs/" + miiId + ".jpg"); } catch(e) {}
+                try { fs.unlinkSync("./static/miiQRs/" + miiId + ".jpg"); } catch(e) {}
+                res.send("{'okay':true}");
+                save();
             }
-            storage.miiIds.splice(storage.miiIds.indexOf(req.query.id), 1);
-            delete storage.miis[req.query.id];
-            fs.unlinkSync("./static/miiImgs/" + req.query.id + ".jpg");
-            fs.unlinkSync("./static/miiQRs/" + req.query.id + ".jpg");
-            res.send("{'okay':true}");
-            save();
+            else {
+                res.send("{'okay':false}");
+            }
+        }
+        // Check if it's a private Mii
+        else if (storage.privateMiis && storage.privateMiis[miiId]) {
+            if (user.privateMiis && user.privateMiis.includes(miiId) || isModerator) {
+                var mii = storage.privateMiis[miiId];
+                
+                // Remove from user's private Miis
+                const uploaderUser = storage.users[mii.uploader];
+                if (uploaderUser && uploaderUser.privateMiis) {
+                    const idx = uploaderUser.privateMiis.indexOf(miiId);
+                    if (idx > -1) uploaderUser.privateMiis.splice(idx, 1);
+                }
+                
+                var d = new Date();
+                makeReport(JSON.stringify({
+                    embeds: [{
+                        "type": "rich",
+                        "title": `Private Mii Deleted by ` + req.cookies.username,
+                        "description": mii.desc,
+                        "color": 0xff6600,
+                        "fields": [
+                            {
+                                "name": `Mii Name`,
+                                "value": mii.name || mii.meta?.name,
+                                "inline": true
+                            },
+                            {
+                                "name": `Uploaded by`,
+                                "value": `[${mii.uploader}](https://miis.kestron.com/user?user=${mii.uploader})`,
+                                "inline": true
+                            }
+                        ],
+                        "footer": {
+                            "text": `Deleted at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
+                        }
+                    }]
+                }));
+                
+                delete storage.privateMiis[miiId];
+                try { fs.unlinkSync("./static/privateMiiImgs/" + miiId + ".jpg"); } catch(e) {}
+                try { fs.unlinkSync("./static/privateMiiImgs/" + miiId + ".png"); } catch(e) {}
+                try { fs.unlinkSync("./static/privateMiiQRs/" + miiId + ".jpg"); } catch(e) {}
+                try { fs.unlinkSync("./static/privateMiiQRs/" + miiId + ".png"); } catch(e) {}
+                res.send("{'okay':true}");
+                save();
+            }
+            else {
+                res.send("{'okay':false}");
+            }
         }
         else {
-            res.send("{'okay':false}");
+            res.send("{'okay':false,'error':'Mii not found'}");
         }
     }
     catch (e) {
@@ -1918,7 +2318,33 @@ site.get('/voteMii', (req, res) => {
 });
 site.get('/mii', (req, res) => {
     let inp = getSendables(req);
-    inp.mii = req.query.id==="average"?storage.miis.average:storage.miis[req.query.id];
+    const miiId = req.query.id;
+    
+    // Check if it's a published Mii
+    if (storage.miis[miiId]) {
+        inp.mii = storage.miis[miiId];
+        inp.isPrivate = false;
+    }
+    // Check if it's a private Mii
+    else if (storage.privateMiis && storage.privateMiis[miiId]) {
+        const privateMii = storage.privateMiis[miiId];
+        const user = storage.users[req.cookies.username];
+        const isModerator = user && canModerate(user);
+        const isOwner = privateMii.uploader === req.cookies.username;
+        
+        // Only allow owner or moderator to view
+        if (!isOwner && !isModerator) {
+            res.status(403).send("Access denied. This is a private Mii.");
+            return;
+        }
+        
+        inp.mii = privateMii;
+        inp.isPrivate = true;
+    }
+    else {
+        res.status(404).send("Mii not found");
+        return;
+    }
     inp.height=miijs.miiHeightToFeetInches(inp.mii.general.height);
     inp.weight=miijs.miiWeightToRealWeight(inp.mii.general.height,inp.mii.general.weight);
     ejs.renderFile('./ejsFiles/miiPage.ejs', inp, {}, function(err, str) {
@@ -1927,7 +2353,7 @@ site.get('/mii', (req, res) => {
             console.log(err);
             return;
         }
-        res.send(str)
+        res.send(str);
     });
 });
 site.get('/user', (req, res) => {
@@ -2006,6 +2432,64 @@ site.get('/settings', (req, res) => {
             return;
         }
         res.send(str)
+    });
+});
+site.get('/myPrivateMiis', (req, res) => {
+    if (!req.cookies.username) {
+        res.redirect("/");
+        return;
+    }
+    
+    if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+        res.redirect("/");
+        return;
+    }
+    
+    var toSend = getSendables(req);
+    const user = storage.users[req.cookies.username];
+    
+    if (!user.privateMiis) user.privateMiis = [];
+    if (!storage.privateMiis) storage.privateMiis = {};
+    
+    toSend.privateMiis = user.privateMiis.map(id => storage.privateMiis[id]).filter(m => m);
+    toSend.privateLimit = PRIVATE_MII_LIMIT;
+    
+    ejs.renderFile('./ejsFiles/myPrivateMiis.ejs', toSend, {}, function(err, str) {
+        if (err) {
+            res.send(err);
+            console.log(err);
+            return;
+        }
+        res.send(str);
+    });
+});
+site.get('/manageCategories', (req, res) => {
+    if (!req.cookies.username) {
+        res.redirect("/");
+        return;
+    }
+    
+    if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+        res.redirect("/");
+        return;
+    }
+    
+    const user = storage.users[req.cookies.username];
+    if (!canEditOfficial(user)) {
+        res.status(403).send("Access denied. Researcher role required.");
+        return;
+    }
+    
+    var toSend = getSendables(req);
+    toSend.officialCategories = storage.officialCategories || {};
+    
+    ejs.renderFile('./ejsFiles/manageCategories.ejs', toSend, {}, function(err, str) {
+        if (err) {
+            res.send(err);
+            console.log(err);
+            return;
+        }
+        res.send(str);
     });
 });
 site.get('/changePfp', (req, res) => {
@@ -2461,11 +2945,19 @@ site.post('/uploadMii', upload.single('mii'), async (req, res) => {
     try {
         let uploader = req.cookies.username;
         if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
-            res.send("{'okay':false}");
+            res.send("{'okay':false,'error':'Invalid authentication'}");
             try { fs.unlinkSync("./uploads/" + req.file.filename); } catch (e) { }
             return;
         }
         const user = storage.users[uploader];
+        
+        // Check private Mii limit
+        if (!user.privateMiis) user.privateMiis = [];
+        if (user.privateMiis.length >= PRIVATE_MII_LIMIT) {
+            res.send(`{'okay':false,'error':'You have reached the limit of ${PRIVATE_MII_LIMIT} private Miis. Please publish or delete some before uploading more.'}`);
+            try { fs.unlinkSync("./uploads/" + req.file.filename); } catch (e) { }
+            return;
+        }
         
         // Check if trying to upload official Mii without permission
         if (req.body.official && !canUploadOfficial(user)) {
@@ -2476,30 +2968,12 @@ site.post('/uploadMii', upload.single('mii'), async (req, res) => {
         
         let mii;
         if (req.body.type === "wii") {
-            mii = miijs.readWiiBin("./uploads/" + req.file.filename);
-            mii = miijs.convertMii(mii, "3ds");
+            mii = miijs.convertMii(miijs.readWiiBin("./uploads/" + req.file.filename), "wii");
         }
         else if (req.body.type === "3ds") {
             mii = await miijs.read3DSQR("./uploads/" + req.file.filename);
         }
         else if (req.body.type === "3dsbin") {
-            // Handle both encrypted and decrypted 3DS bins
-            const binData = fs.readFileSync("./uploads/" + req.file.filename);
-            
-            // The read3DSQR function can handle both encrypted QR data and decrypted bin data
-            // when passed as a buffer, so we just pass it directly
-            try {
-                mii = await miijs.read3DSQR(binData, false);
-            } catch (error) {
-                // If it fails, the bin format might be incompatible
-                console.error("Error reading 3DS bin:", error);
-                res.send("{'error':'Invalid 3DS bin format. Please ensure it is a valid encrypted or decrypted 3DS Mii binary.'}");
-                try { fs.unlinkSync("./uploads/" + req.file.filename); } catch (e) { }
-                return;
-            }
-        }
-        else if (req.body.type === "3dsbin_direct") {
-            // Handle binary data passed directly (from QR scanner)
             mii = await miijs.read3DSQR(req.body["3dsbin"]);
         }
         else {
@@ -2507,51 +2981,817 @@ site.post('/uploadMii', upload.single('mii'), async (req, res) => {
             try { fs.unlinkSync("./uploads/" + req.file.filename); } catch (e) { }
             return;
         }
+
+        // Add official Mii categorization
+        if (req.body.official) {
+            mii.officialCategories = [];
+            
+            // Parse categories (now stores paths instead of names)
+            if (req.body.categories) {
+                const categories = Array.isArray(req.body.categories) ? req.body.categories : [req.body.categories];
+                mii.officialCategories = [...new Set(categories.filter(c => c && c.trim()))];
+            }
+        }
         
         mii.id = genId();
         mii.uploadedOn = Date.now();
-        
-        // Render images
-        await miijs.renderMii(mii, "./static/miiImgs/" + mii.id + ".png");
-        await miijs.write3DSQR(mii, "./static/miiQRs/" + mii.id + ".png");
-        
         mii.uploader = req.body.official ? "Nintendo" : uploader;
         mii.desc = req.body.desc;
         mii.votes = 1;
         mii.official = req.body.official;
+        mii.published = false;
+        mii.blockedFromPublishing = false;
+
+        // Add official Mii categorization
+        if (req.body.official) {
+            mii.officialCategories = [];
+            
+            // Parse games (multiple selections)
+            if (req.body.games) {
+                const games = Array.isArray(req.body.games) ? req.body.games : [req.body.games];
+                mii.officialCategories.push(...games.filter(g => g && g.trim()));
+            }
+            
+            // Parse custom category
+            if (req.body.customCategory && req.body.customCategory.trim()) {
+                mii.officialCategories.push(req.body.customCategory.trim());
+            }
+            
+            // Parse consoles (multiple selections)
+            if (req.body.consoles) {
+                const consoles = Array.isArray(req.body.consoles) ? req.body.consoles : [req.body.consoles];
+                mii.officialCategories.push(...consoles.filter(c => c && c.trim()));
+            }
+            
+            // Ensure uniqueness
+            mii.officialCategories = [...new Set(mii.officialCategories)];
+        }
         
-        storage.miis[mii.id] = mii;
-        storage.miiIds.push(mii.id);
-        storage.users[req.body.official ? "Nintendo" : uploader].submissions.push(mii.id);
+        // Save to private folders
+        miijs.render3DSMiiFromJSON(mii, "./static/privateMiiImgs/" + mii.id + ".png");
+        miijs.write3DSQR(mii, "./static/privateMiiQRs/" + mii.id + ".png");
+        
+        // Add to user's private Miis
+        user.privateMiis.push(mii.id);
+        
+        // Store in a separate private miis object
+        if (!storage.privateMiis) storage.privateMiis = {};
+        storage.privateMiis[mii.id] = mii;
+        
         save();
         
-        setTimeout(() => { res.redirect("/mii?id=" + mii.id) }, 2000); // To ensure the QR code is generated
-        
+        // Send to Discord for moderator review
         var d = new Date();
         makeReport(JSON.stringify({
             embeds: [{
                 "type": "rich",
-                "title": (req.body.official ? "Official " : "") + "Mii Uploaded",
-                "description": "**" + mii.meta.name + "** uploaded by **" + uploader + "**",
-                "color": 0x25d366,
+                "title": (req.body.official ? "Official " : "") + `Private Mii Uploaded`,
+                "description": mii.desc,
+                "color": 0x00aaff,
+                "fields": [
+                    {
+                        "name": `Mii Name`,
+                        "value": mii.name || mii.meta?.name,
+                        "inline": true
+                    },
+                    {
+                        "name": `Uploaded by`,
+                        "value": `[${uploader}](https://miis.kestron.com/user?user=${uploader})`,
+                        "inline": true
+                    },
+                    {
+                        "name": `Mii Creator Name`,
+                        "value": mii.creatorName || mii.meta?.creatorName,
+                        "inline": true
+                    }
+                ],
                 "thumbnail": {
-                    "url": "https://infinimii.kestron.com/miiImgs/" + mii.id + ".png",
+                    "url": `https://miis.kestron.com/privateMiiImgs/${mii.id}.jpg`,
                     "height": 0,
                     "width": 0
                 },
                 "footer": {
-                    "text": d.toDateString() + " " + d.toTimeString()
+                    "text": `View: https://miis.kestron.com/mii?id=${mii.id} | Uploaded at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
                 }
             }]
         }));
         
+        setTimeout(() => { res.redirect("/myPrivateMiis") }, 2000);
     } catch (e) {
-        console.error("Error uploading Mii:", e);
-        res.send("{'error':'There was an error uploading your Mii - make sure you selected the right Mii type'}");
-        try { fs.unlinkSync("./uploads/" + req.file.filename); } catch (err) { }
+        console.error('Error uploading Mii:', e);
+        res.send("{'okay':false,'error':'Server error'}");
+        try { fs.unlinkSync("./uploads/" + req.file.filename); } catch (e2) { }
     }
-    
-    try { fs.unlinkSync("./uploads/" + req.file.filename); } catch (e) { }
+});
+// Update Official Mii Categories (Researcher+)
+site.post('/updateOfficialCategories', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!canEditOfficial(currentUser)) {
+            return res.json({ okay: false, error: 'Insufficient permissions - Researcher role required' });
+        }
+
+        const { miiId, categories } = req.body;
+
+        if (!miiId || !Array.isArray(categories)) {
+            return res.json({ okay: false, error: 'Missing parameters' });
+        }
+
+        const mii = storage.miis[miiId];
+        if (!mii) {
+            return res.json({ okay: false, error: 'Mii not found' });
+        }
+
+        if (!mii.official) {
+            return res.json({ okay: false, error: 'This is not an official Mii' });
+        }
+
+        const oldCategories = mii.officialCategories || [];
+        mii.officialCategories = [...new Set(categories.filter(c => c && c.trim()))];
+
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '📂 Official Mii Categories Updated',
+                description: `${req.cookies.username} updated categories for an official Mii`,
+                color: 0x00AAFF,
+                fields: [
+                    {
+                        name: 'Mii',
+                        value: `[${mii.meta?.name || mii.name}](https://miis.kestron.com/mii?id=${miiId})`,
+                        inline: true
+                    },
+                    {
+                        name: 'Old Categories',
+                        value: oldCategories.length ? oldCategories.join(', ') : 'None',
+                        inline: false
+                    },
+                    {
+                        name: 'New Categories',
+                        value: mii.officialCategories.length ? mii.officialCategories.join(', ') : 'None',
+                        inline: false
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true });
+    } catch (e) {
+        console.error('Error updating official categories:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+// Get all official categories (for building forms)
+site.get('/getOfficialCategories', (req, res) => {
+    try {
+        if (!storage.officialCategories) {
+            storage.officialCategories = {};
+        }
+        res.json({ okay: true, categories: storage.officialCategories });
+    } catch (e) {
+        console.error('Error getting categories:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+
+// Add new parent category (Researcher+)
+site.post('/addParentCategory', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!canEditOfficial(currentUser)) {
+            return res.json({ okay: false, error: 'Insufficient permissions' });
+        }
+
+        const { name, color } = req.body;
+
+        if (!name || !name.trim()) {
+            return res.json({ okay: false, error: 'Category name required' });
+        }
+
+        const categoryName = name.trim();
+
+        if (storage.officialCategories[categoryName]) {
+            return res.json({ okay: false, error: 'Category already exists' });
+        }
+
+        storage.officialCategories[categoryName] = {
+            subcategories: [],
+            color: color || "#999999"
+        };
+
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '📁 New Parent Category Created',
+                description: `${req.cookies.username} created a new parent category`,
+                color: parseInt(color?.replace('#', '') || '999999', 16),
+                fields: [
+                    {
+                        name: 'Category Name',
+                        value: categoryName,
+                        inline: true
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true, categories: storage.officialCategories });
+    } catch (e) {
+        console.error('Error adding parent category:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+
+// Add new subcategory (Researcher+)
+site.post('/addSubcategory', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!canEditOfficial(currentUser)) {
+            return res.json({ okay: false, error: 'Insufficient permissions' });
+        }
+
+        const { parentCategory, subcategoryName } = req.body;
+
+        if (!parentCategory || !subcategoryName || !subcategoryName.trim()) {
+            return res.json({ okay: false, error: 'Parent category and subcategory name required' });
+        }
+
+        if (!storage.officialCategories[parentCategory]) {
+            return res.json({ okay: false, error: 'Parent category does not exist' });
+        }
+
+        const subName = subcategoryName.trim();
+
+        if (storage.officialCategories[parentCategory].subcategories.includes(subName)) {
+            return res.json({ okay: false, error: 'Subcategory already exists' });
+        }
+
+        storage.officialCategories[parentCategory].subcategories.push(subName);
+
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '🏷️ New Subcategory Created',
+                description: `${req.cookies.username} created a new subcategory`,
+                color: parseInt(storage.officialCategories[parentCategory].color?.replace('#', '') || '999999', 16),
+                fields: [
+                    {
+                        name: 'Parent Category',
+                        value: parentCategory,
+                        inline: true
+                    },
+                    {
+                        name: 'Subcategory',
+                        value: subName,
+                        inline: true
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true, categories: storage.officialCategories });
+    } catch (e) {
+        console.error('Error adding subcategory:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+
+// Rename parent category (Researcher+)
+site.post('/renameParentCategory', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!canEditOfficial(currentUser)) {
+            return res.json({ okay: false, error: 'Insufficient permissions' });
+        }
+
+        const { oldName, newName } = req.body;
+
+        if (!oldName || !newName || !newName.trim()) {
+            return res.json({ okay: false, error: 'Old and new names required' });
+        }
+
+        if (!storage.officialCategories[oldName]) {
+            return res.json({ okay: false, error: 'Parent category does not exist' });
+        }
+
+        const newNameTrimmed = newName.trim();
+
+        if (storage.officialCategories[newNameTrimmed]) {
+            return res.json({ okay: false, error: 'New name already exists' });
+        }
+
+        // Rename in category structure
+        storage.officialCategories[newNameTrimmed] = storage.officialCategories[oldName];
+        delete storage.officialCategories[oldName];
+
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '✏️ Parent Category Renamed',
+                description: `${req.cookies.username} renamed a parent category`,
+                color: 0x00AAFF,
+                fields: [
+                    {
+                        name: 'Old Name',
+                        value: oldName,
+                        inline: true
+                    },
+                    {
+                        name: 'New Name',
+                        value: newNameTrimmed,
+                        inline: true
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true, categories: storage.officialCategories });
+    } catch (e) {
+        console.error('Error renaming parent category:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+
+// Rename subcategory and update all Miis using it (Researcher+)
+site.post('/renameSubcategory', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!canEditOfficial(currentUser)) {
+            return res.json({ okay: false, error: 'Insufficient permissions' });
+        }
+
+        const { parentCategory, oldName, newName } = req.body;
+
+        if (!parentCategory || !oldName || !newName || !newName.trim()) {
+            return res.json({ okay: false, error: 'All fields required' });
+        }
+
+        if (!storage.officialCategories[parentCategory]) {
+            return res.json({ okay: false, error: 'Parent category does not exist' });
+        }
+
+        const subcats = storage.officialCategories[parentCategory].subcategories;
+        const index = subcats.indexOf(oldName);
+
+        if (index === -1) {
+            return res.json({ okay: false, error: 'Subcategory does not exist' });
+        }
+
+        const newNameTrimmed = newName.trim();
+
+        if (subcats.includes(newNameTrimmed)) {
+            return res.json({ okay: false, error: 'New name already exists' });
+        }
+
+        // Update in category structure
+        subcats[index] = newNameTrimmed;
+
+        // Update all official Miis that use this subcategory
+        let updatedCount = 0;
+        Object.values(storage.miis).forEach(mii => {
+            if (mii.official && mii.officialCategories && mii.officialCategories.includes(oldName)) {
+                const catIndex = mii.officialCategories.indexOf(oldName);
+                mii.officialCategories[catIndex] = newNameTrimmed;
+                updatedCount++;
+            }
+        });
+
+        // Also check private Miis
+        if (storage.privateMiis) {
+            Object.values(storage.privateMiis).forEach(mii => {
+                if (mii.official && mii.officialCategories && mii.officialCategories.includes(oldName)) {
+                    const catIndex = mii.officialCategories.indexOf(oldName);
+                    mii.officialCategories[catIndex] = newNameTrimmed;
+                    updatedCount++;
+                }
+            });
+        }
+
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '✏️ Subcategory Renamed',
+                description: `${req.cookies.username} renamed a subcategory`,
+                color: parseInt(storage.officialCategories[parentCategory].color?.replace('#', '') || '999999', 16),
+                fields: [
+                    {
+                        name: 'Parent Category',
+                        value: parentCategory,
+                        inline: false
+                    },
+                    {
+                        name: 'Old Name',
+                        value: oldName,
+                        inline: true
+                    },
+                    {
+                        name: 'New Name',
+                        value: newNameTrimmed,
+                        inline: true
+                    },
+                    {
+                        name: 'Miis Updated',
+                        value: updatedCount.toString(),
+                        inline: true
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true, categories: storage.officialCategories, updatedMiis: updatedCount });
+    } catch (e) {
+        console.error('Error renaming subcategory:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+
+// Delete subcategory and remove from all Miis (Researcher+)
+site.post('/deleteSubcategory', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!canEditOfficial(currentUser)) {
+            return res.json({ okay: false, error: 'Insufficient permissions' });
+        }
+
+        const { parentCategory, subcategoryName } = req.body;
+
+        if (!parentCategory || !subcategoryName) {
+            return res.json({ okay: false, error: 'Parent category and subcategory name required' });
+        }
+
+        if (!storage.officialCategories[parentCategory]) {
+            return res.json({ okay: false, error: 'Parent category does not exist' });
+        }
+
+        const subcats = storage.officialCategories[parentCategory].subcategories;
+        const index = subcats.indexOf(subcategoryName);
+
+        if (index === -1) {
+            return res.json({ okay: false, error: 'Subcategory does not exist' });
+        }
+
+        // Remove from category structure
+        subcats.splice(index, 1);
+
+        // Remove from all official Miis
+        let updatedCount = 0;
+        Object.values(storage.miis).forEach(mii => {
+            if (mii.official && mii.officialCategories && mii.officialCategories.includes(subcategoryName)) {
+                mii.officialCategories = mii.officialCategories.filter(c => c !== subcategoryName);
+                updatedCount++;
+            }
+        });
+
+        // Also check private Miis
+        if (storage.privateMiis) {
+            Object.values(storage.privateMiis).forEach(mii => {
+                if (mii.official && mii.officialCategories && mii.officialCategories.includes(subcategoryName)) {
+                    mii.officialCategories = mii.officialCategories.filter(c => c !== subcategoryName);
+                    updatedCount++;
+                }
+            });
+        }
+
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '🗑️ Subcategory Deleted',
+                description: `${req.cookies.username} deleted a subcategory`,
+                color: 0xFF4444,
+                fields: [
+                    {
+                        name: 'Parent Category',
+                        value: parentCategory,
+                        inline: true
+                    },
+                    {
+                        name: 'Subcategory',
+                        value: subcategoryName,
+                        inline: true
+                    },
+                    {
+                        name: 'Miis Updated',
+                        value: updatedCount.toString(),
+                        inline: true
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true, categories: storage.officialCategories, updatedMiis: updatedCount });
+    } catch (e) {
+        console.error('Error deleting subcategory:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+
+// Delete parent category (Researcher+)
+site.post('/deleteParentCategory', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!canEditOfficial(currentUser)) {
+            return res.json({ okay: false, error: 'Insufficient permissions' });
+        }
+
+        const { name } = req.body;
+
+        if (!name) {
+            return res.json({ okay: false, error: 'Category name required' });
+        }
+
+        if (!storage.officialCategories[name]) {
+            return res.json({ okay: false, error: 'Category does not exist' });
+        }
+
+        const subcatsToRemove = storage.officialCategories[name].subcategories;
+
+        // Remove from category structure
+        delete storage.officialCategories[name];
+
+        // Remove all subcategories from all Miis
+        let updatedCount = 0;
+        Object.values(storage.miis).forEach(mii => {
+            if (mii.official && mii.officialCategories) {
+                const originalLength = mii.officialCategories.length;
+                mii.officialCategories = mii.officialCategories.filter(c => !subcatsToRemove.includes(c));
+                if (mii.officialCategories.length !== originalLength) {
+                    updatedCount++;
+                }
+            }
+        });
+
+        // Also check private Miis
+        if (storage.privateMiis) {
+            Object.values(storage.privateMiis).forEach(mii => {
+                if (mii.official && mii.officialCategories) {
+                    const originalLength = mii.officialCategories.length;
+                    mii.officialCategories = mii.officialCategories.filter(c => !subcatsToRemove.includes(c));
+                    if (mii.officialCategories.length !== originalLength) {
+                        updatedCount++;
+                    }
+                }
+            });
+        }
+
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '🗑️ Parent Category Deleted',
+                description: `${req.cookies.username} deleted a parent category`,
+                color: 0xFF0000,
+                fields: [
+                    {
+                        name: 'Category',
+                        value: name,
+                        inline: true
+                    },
+                    {
+                        name: 'Subcategories Removed',
+                        value: subcatsToRemove.length.toString(),
+                        inline: true
+                    },
+                    {
+                        name: 'Miis Updated',
+                        value: updatedCount.toString(),
+                        inline: true
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true, categories: storage.officialCategories, updatedMiis: updatedCount });
+    } catch (e) {
+        console.error('Error deleting parent category:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+// Publish a private Mii
+site.post('/publishMii', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const { miiId } = req.body;
+        const user = storage.users[req.cookies.username];
+        
+        if (!user.privateMiis) user.privateMiis = [];
+        if (!user.privateMiis.includes(miiId)) {
+            return res.json({ okay: false, error: 'Mii not found in your private collection' });
+        }
+
+        const mii = storage.privateMiis[miiId];
+        if (!mii) {
+            return res.json({ okay: false, error: 'Mii data not found' });
+        }
+
+        // Check if blocked from publishing
+        if (mii.blockedFromPublishing) {
+            return res.json({ okay: false, error: 'This Mii has been blocked from publishing by a moderator. Please contact support if you believe this is an error.' });
+        }
+
+        // Move files from private to public folders
+        try {
+            if (fs.existsSync(`./static/privateMiiImgs/${miiId}.jpg`)) {
+                fs.renameSync(`./static/privateMiiImgs/${miiId}.jpg`, `./static/miiImgs/${miiId}.jpg`);
+            } else if (fs.existsSync(`./static/privateMiiImgs/${miiId}.png`)) {
+                fs.renameSync(`./static/privateMiiImgs/${miiId}.png`, `./static/miiImgs/${miiId}.jpg`);
+            }
+            
+            if (fs.existsSync(`./static/privateMiiQRs/${miiId}.jpg`)) {
+                fs.renameSync(`./static/privateMiiQRs/${miiId}.jpg`, `./static/miiQRs/${miiId}.jpg`);
+            } else if (fs.existsSync(`./static/privateMiiQRs/${miiId}.png`)) {
+                fs.renameSync(`./static/privateMiiQRs/${miiId}.png`, `./static/miiQRs/${miiId}.jpg`);
+            }
+        } catch (e) {
+            console.error('Error moving Mii files:', e);
+            return res.json({ okay: false, error: 'Error moving Mii files' });
+        }
+
+        // Update Mii status
+        mii.published = true;
+        
+        // Move to public storage
+        storage.miis[miiId] = mii;
+        storage.miiIds.push(miiId);
+        
+        if (!user.submissions) user.submissions = [];
+        user.submissions.push(miiId);
+        
+        // Remove from private storage
+        user.privateMiis.splice(user.privateMiis.indexOf(miiId), 1);
+        delete storage.privateMiis[miiId];
+        
+        save();
+
+        // Notify Discord
+        var d = new Date();
+        makeReport(JSON.stringify({
+            embeds: [{
+                "type": "rich",
+                "title": (mii.official ? "Official " : "") + `Mii Published`,
+                "description": mii.desc,
+                "color": 0x00ff00,
+                "fields": [
+                    {
+                        "name": `Mii Name`,
+                        "value": mii.name || mii.meta?.name,
+                        "inline": true
+                    },
+                    {
+                        "name": `Published by`,
+                        "value": `[${req.cookies.username}](https://miis.kestron.com/user?user=${req.cookies.username})`,
+                        "inline": true
+                    }
+                ],
+                "thumbnail": {
+                    "url": `https://miis.kestron.com/miiImgs/${miiId}.jpg`,
+                    "height": 0,
+                    "width": 0
+                },
+                "footer": {
+                    "text": `View: https://miis.kestron.com/mii?id=${miiId} | Published at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
+                }
+            }]
+        }));
+
+        res.json({ okay: true });
+    } catch (e) {
+        console.error('Error publishing Mii:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+// Block a private Mii from being published (Moderator only)
+site.post('/blockMiiFromPublishing', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        if (!canModerate(storage.users[req.cookies.username])) {
+            return res.json({ okay: false, error: 'Not authorized' });
+        }
+
+        const { miiId, reason } = req.body;
+
+        const mii = storage.privateMiis[miiId];
+        if (!mii) {
+            return res.json({ okay: false, error: 'Private Mii not found' });
+        }
+
+        mii.blockedFromPublishing = true;
+        mii.blockReason = reason || 'No reason provided';
+        
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '🚫 Private Mii Blocked from Publishing',
+                description: `${req.cookies.username} blocked a private Mii from being published`,
+                color: 0xFF6600,
+                fields: [
+                    {
+                        name: 'Mii Name',
+                        value: mii.name || mii.meta?.name,
+                        inline: true
+                    },
+                    {
+                        name: 'Uploader',
+                        value: mii.uploader,
+                        inline: true
+                    },
+                    {
+                        name: 'Reason',
+                        value: reason || 'No reason provided'
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true });
+    } catch (e) {
+        console.error('Error blocking Mii:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
 });
 site.post('/convertMii', upload.single('mii'), async (req, res) => {
     try {

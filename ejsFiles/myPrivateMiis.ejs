@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>My Private Miis - InfiniMii</title>
+        <link rel='stylesheet' href="global.css">
+        <link rel="stylesheet" href="utilityPages.css">
+        <link rel="stylesheet" href="privateMiis.css">
+    </head>
+    <body>
+        <%- partials.header %>
+        <%- partials.accountDisplay %>
+        <div class='content'>
+            <%- partials.sidebar %>
+            <div class='private-miis-container'>
+                <div class="private-header">
+                    <h1>My Private Miis</h1>
+                    <p class="limit-info">
+                        <%= privateMiis.length %> / <%= privateLimit %> private Miis
+                    </p>
+                    <p class="info-text">
+                        These Miis are uploaded but not yet published. Only you and moderators can see them.
+                        Publish them to make them visible to everyone!
+                    </p>
+                    <a href="/upload" class="upload-button">Upload New Mii</a>
+                </div>
+
+                <% if(privateMiis.length > 0) { %>
+                    <div id="private-miis-grid">
+                        <% for(var i=0; i<privateMiis.length; i++){ %>
+                            <div class="private-mii-card" data-mii-id="<%= privateMiis[i].id %>">
+                                <a href="<%= '/mii?id='+privateMiis[i].id %>">
+                                    <img src="privateMiiImgs/<%= privateMiis[i].id %>.jpg" 
+                                         onerror="this.src='privateMiiImgs/<%= privateMiis[i].id %>.png'"
+                                         alt="<%= privateMiis[i].meta?.name || privateMiis[i].name %>">
+                                </a>
+                                <div class="mii-info">
+                                    <h3><%= privateMiis[i].meta?.name || privateMiis[i].name %></h3>
+                                    <% if(privateMiis[i].desc) { %>
+                                        <p class="mii-desc">
+                                            <%= privateMiis[i].desc.length > 60 ? 
+                                                privateMiis[i].desc.substring(0, 60) + '...' : 
+                                                privateMiis[i].desc %>
+                                        </p>
+                                    <% } %>
+                                    <% if(privateMiis[i].blockedFromPublishing) { %>
+                                        <div class="blocked-notice">
+                                            🚫 Blocked from publishing
+                                            <% if(privateMiis[i].blockReason) { %>
+                                                <br><small><%= privateMiis[i].blockReason %></small>
+                                            <% } %>
+                                        </div>
+                                    <% } %>
+                                </div>
+                                <div class="mii-actions">
+                                    <% if(!privateMiis[i].blockedFromPublishing) { %>
+                                        <button class="publish-btn" onclick="publishMii('<%= privateMiis[i].id %>')">
+                                            📤 Publish
+                                        </button>
+                                    <% } %>
+                                    <button class="delete-btn" onclick="deleteMii('<%= privateMiis[i].id %>')">
+                                        🗑️ Delete
+                                    </button>
+                                </div>
+                            </div>
+                        <% } %>
+                    </div>
+                <% } else { %>
+                    <div class="no-miis">
+                        <p>You don't have any private Miis yet.</p>
+                        <a href="/upload" class="upload-button">Upload Your First Mii</a>
+                    </div>
+                <% } %>
+            </div>
+            <%- partials.featuredMiis %>
+        </div>
+        <%- partials.footer %>
+        
+        <script>
+            async function publishMii(miiId) {
+                if (!confirm('Are you sure you want to publish this Mii? It will be visible to everyone.')) {
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/publishMii', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ miiId })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.okay) {
+                        alert('Mii published successfully!');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.error || 'Failed to publish Mii'));
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error publishing Mii');
+                }
+            }
+            
+            async function deleteMii(miiId) {
+                if (!confirm('Are you sure you want to delete this Mii? This cannot be undone.')) {
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/deleteMii?id=' + miiId);
+                    const data = await response.text();
+                    
+                    if (data.includes('true')) {
+                        alert('Mii deleted successfully');
+                        location.reload();
+                    } else {
+                        alert('Error deleting Mii');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error deleting Mii');
+                }
+            }
+        </script>
+    </body>
+</html>

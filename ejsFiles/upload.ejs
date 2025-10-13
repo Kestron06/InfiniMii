@@ -69,7 +69,12 @@
             <%- partials.sidebar %>
             <div class='upload'>
                 <fieldset>
-                    <legend>Upload a Mii to the Website</legend>
+                    <legend>Upload a Mii (Private)</legend>
+                    <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+                        <strong>ℹ️ Note:</strong> Uploaded Miis are private by default. 
+                        Visit <a href="/myPrivateMiis" style="color: #0066cc; font-weight: bold;">My Private Miis</a> 
+                        to publish them and make them visible to everyone!
+                    </div>
                     
                     <div class="upload-tabs">
                         <button class="tab-button active" onclick="switchTab('file')">📁 File Upload</button>
@@ -106,47 +111,232 @@
                             
                             <textarea maxlength="250" rows="5" placeholder="Description..." name="desc"></textarea>
                             
-                            <% if(users[thisUser] && (users[thisUser].roles && (users[thisUser].roles.includes('researcher') || users[thisUser].roles.includes('administrator')))) { %>
-                                <div style="margin: 1rem 0;">
-                                    <input type="checkbox" name="official" id="officialCheck">
-                                    <label for="officialCheck">
-                                        This is an <b>exact copy of a Mii</b> that appears in a game by default officially 
-                                        (Please mention which in description). Checking or not checking this box falsely may 
-                                        result in the Mii being taken down.
+                            <% if(users[thisUser] && (users[thisUser].roles.includes('researcher') || 
+                          users[thisUser].roles.includes('administrator'))) { %>
+                                <div class="official-section">
+                                    <input type="checkbox" name="official" id="officialCheckbox" onchange="toggleOfficialFields()"> 
+                                    <label for="official">
+                                        <b>This is an exact copy of a Mii</b> that appears in a Nintendo game/promotion officially
                                     </label>
+                                    
+                                    <div id="officialFields" style="display: none; margin-top: 15px; padding: 15px; background: #f0f8ff; border-radius: 8px; border: 2px solid #bbdefb;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                            <h4 style="margin: 0;">Official Mii Categories:</h4>
+                                            <a href="/manageCategories" target="_blank" class="manage-cats-link">
+                                                🗂️ Manage Categories
+                                            </a>
+                                        </div>
+                                        
+                                        <p style="color: #666; margin-bottom: 15px; font-size: 0.95em;">
+                                            Select all categories that apply. Only leaf categories (those without children) can be selected.
+                                        </p>
+                                        
+                                        <div id="categoriesContainer">
+                                            <p style="text-align: center; color: #666;">Loading categories...</p>
+                                        </div>
+                                        
+                                        <p style="margin-top: 15px; font-size: 0.9em; color: #666;">
+                                            <strong>Note:</strong> Please mention specific details in the description above.
+                                            Incorrectly marking a Mii as official may result in it being removed.
+                                        </p>
+                                    </div>
                                 </div>
-                            <% } %>
-                            
-                            <input type="submit" value="Upload Mii">
-                        </form>
-                    </div>
-                    
-                    <!-- Studio Tab -->
-                    <div id="studioTab" class="tab-content">
-                        <form action="/uploadStudioMii" method="post" id='studioForm'>
-                            <p style="color: var(--text-2); margin-bottom: 1rem;">
-                                Upload a Mii using the Studio format hex code or by pasting a Studio URL.
-                            </p>
-                            
-                            <label for="studioCode">Studio Code or URL:</label>
-                            <input type="text" name="studioCode" id="studioCode" 
-                                   placeholder="Enter Studio hex code or paste Studio URL" required>
-                            
-                            <div class="studio-preview" id="studioPreview">
-                                <p>Preview:</p>
-                                <img id="studioPreviewImg" alt="Mii Preview">
-                            </div>
-                            
-                            <textarea maxlength="250" rows="5" placeholder="Description..." name="desc"></textarea>
-                            
-                            <% if(users[thisUser] && (users[thisUser].roles && (users[thisUser].roles.includes('researcher') || users[thisUser].roles.includes('administrator')))) { %>
-                                <div style="margin: 1rem 0;">
-                                    <input type="checkbox" name="official" id="studioOfficialCheck">
-                                    <label for="studioOfficialCheck">
-                                        This is an <b>exact copy of a Mii</b> that appears in a game by default officially 
-                                        (Please mention which in description).
-                                    </label>
-                                </div>
+                                
+                                <script>
+                                    let officialCategories = [];
+                                    let selectedPaths = new Set();
+                                    let expandedNodes = new Set();
+                                    
+                                    function toggleOfficialFields() {
+                                        const checkbox = document.getElementById('officialCheckbox');
+                                        const fields = document.getElementById('officialFields');
+                                        fields.style.display = checkbox.checked ? 'block' : 'none';
+                                        
+                                        if (checkbox.checked && officialCategories.length === 0) {
+                                            loadCategories();
+                                        }
+                                    }
+                                    
+                                    async function loadCategories() {
+                                        try {
+                                            const response = await fetch('/getOfficialCategories');
+                                            const data = await response.json();
+                                            
+                                            if (data.okay) {
+                                                officialCategories = data.categories;
+                                                renderCategoryTree();
+                                            } else {
+                                                document.getElementById('categoriesContainer').innerHTML = 
+                                                    '<p style="color: red;">Error loading categories</p>';
+                                            }
+                                        } catch (error) {
+                                            console.error('Error loading categories:', error);
+                                            document.getElementById('categoriesContainer').innerHTML = 
+                                                '<p style="color: red;">Error loading categories</p>';
+                                        }
+                                    }
+                                    
+                                    function renderCategoryTree() {
+                                        const container = document.getElementById('categoriesContainer');
+                                        
+                                        if (officialCategories.length === 0) {
+                                            container.innerHTML = '<p style="text-align: center; color: #666;">No categories available. <a href="/manageCategories" target="_blank">Create some!</a></p>';
+                                            return;
+                                        }
+                                        
+                                        container.innerHTML = '<div class="category-tree-upload">' + renderCategoryNodes(officialCategories) + '</div>';
+                                    }
+                                    
+                                    function renderCategoryNodes(nodes, level = 0) {
+                                        let html = '';
+                                        
+                                        nodes.forEach(node => {
+                                            const hasChildren = node.children && node.children.length > 0;
+                                            const isExpanded = expandedNodes.has(node.path);
+                                            const isLeaf = !hasChildren;
+                                            const isSelected = selectedPaths.has(node.path);
+                                            const indent = level * 20;
+                                            
+                                            html += `
+                                                <div class="tree-node-upload" style="margin-left: ${indent}px;">
+                                                    <div class="node-line" style="border-left: 3px solid ${node.color}">
+                                                        ${hasChildren ? `
+                                                            <span class="toggle-upload" onclick="toggleNodeUpload('${node.path}')">
+                                                                ${isExpanded ? '▼' : '▶'}
+                                                            </span>
+                                                        ` : '<span class="leaf-marker">•</span>'}
+                                                        
+                                                        ${isLeaf ? `
+                                                            <label class="category-label-upload">
+                                                                <input type="checkbox" 
+                                                                    name="categories" 
+                                                                    value="${node.path}"
+                                                                    ${isSelected ? 'checked' : ''}
+                                                                    onchange="updateSelection('${node.path}', this.checked)">
+                                                                <span style="color: ${node.color}; font-weight: 500;">${node.name}</span>
+                                                            </label>
+                                                        ` : `
+                                                            <span class="parent-name" style="color: ${node.color}; font-weight: 600;">
+                                                                ${node.name}
+                                                            </span>
+                                                        `}
+                                                    </div>
+                                                    
+                                                    ${hasChildren && isExpanded ? `
+                                                        <div class="children-upload">
+                                                            ${renderCategoryNodes(node.children, level + 1)}
+                                                        </div>
+                                                    ` : ''}
+                                                </div>
+                                            `;
+                                        });
+                                        
+                                        return html;
+                                    }
+                                    
+                                    function toggleNodeUpload(path) {
+                                        if (expandedNodes.has(path)) {
+                                            expandedNodes.delete(path);
+                                        } else {
+                                            expandedNodes.add(path);
+                                        }
+                                        renderCategoryTree();
+                                    }
+                                    
+                                    function updateSelection(path, checked) {
+                                        if (checked) {
+                                            selectedPaths.add(path);
+                                        } else {
+                                            selectedPaths.delete(path);
+                                        }
+                                    }
+                                </script>
+                                
+                                <style>
+                                    .manage-cats-link {
+                                        background: #2196F3;
+                                        color: white;
+                                        padding: 6px 12px;
+                                        border-radius: 6px;
+                                        text-decoration: none;
+                                        font-size: 0.9em;
+                                        font-weight: bold;
+                                        transition: background 0.3s;
+                                    }
+                                    
+                                    .manage-cats-link:hover {
+                                        background: #0b7dda;
+                                    }
+                                    
+                                    .category-tree-upload {
+                                        background: white;
+                                        border: 1px solid #ddd;
+                                        border-radius: 8px;
+                                        padding: 15px;
+                                        max-height: 400px;
+                                        overflow-y: auto;
+                                    }
+                                    
+                                    .tree-node-upload {
+                                        margin-bottom: 4px;
+                                    }
+                                    
+                                    .node-line {
+                                        display: flex;
+                                        align-items: center;
+                                        padding: 8px;
+                                        background: #f9f9f9;
+                                        border-radius: 6px;
+                                        border-left-width: 3px;
+                                        margin-bottom: 4px;
+                                    }
+                                    
+                                    .toggle-upload {
+                                        cursor: pointer;
+                                        user-select: none;
+                                        margin-right: 8px;
+                                        width: 18px;
+                                        color: #666;
+                                        font-size: 0.85em;
+                                    }
+                                    
+                                    .toggle-upload:hover {
+                                        color: #000;
+                                    }
+                                    
+                                    .leaf-marker {
+                                        display: inline-block;
+                                        width: 18px;
+                                        text-align: center;
+                                        margin-right: 8px;
+                                        color: #ccc;
+                                        font-size: 0.7em;
+                                    }
+                                    
+                                    .category-label-upload {
+                                        display: flex;
+                                        align-items: center;
+                                        gap: 8px;
+                                        cursor: pointer;
+                                        flex: 1;
+                                    }
+                                    
+                                    .category-label-upload:hover {
+                                        opacity: 0.8;
+                                    }
+                                    
+                                    .category-label-upload input[type="checkbox"] {
+                                        cursor: pointer;
+                                    }
+                                    
+                                    .parent-name {
+                                        font-size: 1.05em;
+                                    }
+                                    
+                                    .children-upload {
+                                        margin-top: 4px;
+                                    }
+                                </style>
                             <% } %>
                             
                             <input type="submit" value="Upload from Studio">

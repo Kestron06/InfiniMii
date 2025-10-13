@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title><%= title %></title>
+        <link rel="stylesheet" href="global.css">
+        <link rel="stylesheet" href="utilityPages.css">
+        <link rel="stylesheet" href="official.css">
+    </head>
+    <body>
+        <%- partials.header %>
+        <%- partials.accountDisplay %>
+        <div class="content">
+            <%- partials.sidebar %>
+            
+            <div class="official-miis-page">
+                <div class="official-header">
+                    <h1>🌟 Official Miis</h1>
+                    <p class="subtitle">Miis that appear officially in Nintendo games and promotions</p>
+                </div>
+
+                <!-- Category Filter -->
+                <div class="category-filter">
+                    <h3>Filter by Category:</h3>
+                    <div class="filter-buttons">
+                        <a href="/official" class="filter-btn <%= !currentFilter ? 'active' : '' %>">
+                            All (<%= displayedMiis.length %>)
+                        </a>
+                        <% availableCategories.forEach(category => { %>
+                            <a href="/official?category=<%= encodeURIComponent(category) %>" 
+                               class="filter-btn <%= currentFilter === category ? 'active' : '' %>">
+                                <%= category %>
+                            </a>
+                        <% }); %>
+                    </div>
+                </div>
+
+                <% if(currentFilter) { %>
+                    <div class="current-filter">
+                        Showing: <strong><%= currentFilter %></strong>
+                        <a href="/official" class="clear-filter">✕ Clear Filter</a>
+                    </div>
+                <% } %>
+
+                <!-- Miis Grid -->
+                <% if(displayedMiis.length > 0) { %>
+                    <div id="browse-miis">
+                        <% for(var i=0; i<displayedMiis.length; i++){ %>
+                            <div class="mii-card" id="<%= displayedMiis[i].id %>">
+                                <a href="<%= '/mii?id='+displayedMiis[i].id %>">
+                                    <img src="miiImgs/<%= displayedMiis[i].id %>.jpg" 
+                                         alt="<%= displayedMiis[i].meta?.name || displayedMiis[i].name %>">
+                                </a>
+                                <div class="flex">
+                                    <div>
+                                        <h3><%= displayedMiis[i].meta?.name || displayedMiis[i].name %></h3>
+                                        <div class="official-badge">⭐ Official</div>
+                                        <% if(displayedMiis[i].officialCategories && displayedMiis[i].officialCategories.length > 0) { %>
+                                            <div class="mii-categories">
+                                                <% displayedMiis[i].officialCategories.slice(0, 3).forEach(cat => { %>
+                                                    <span class="category-tag"><%= cat %></span>
+                                                <% }); %>
+                                                <% if(displayedMiis[i].officialCategories.length > 3) { %>
+                                                    <span class="category-tag more">+<%= displayedMiis[i].officialCategories.length - 3 %></span>
+                                                <% } %>
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                </div>
+                                <p>
+                                    <%= displayedMiis[i].desc && displayedMiis[i].desc.length > 75 ? 
+                                        displayedMiis[i].desc.substring(0, 75) + '...' : 
+                                        (displayedMiis[i].desc || '') %>
+                                </p>
+                            </div>
+                        <% } %>
+                    </div>
+                <% } else { %>
+                    <div class="no-results">
+                        <h3>No official Miis found<% if(currentFilter) { %> in <%= currentFilter %><% } %></h3>
+                        <% if(currentFilter) { %>
+                            <a href="/official" class="btn-primary">View All Official Miis</a>
+                        <% } %>
+                    </div>
+                <% } %>
+            </div>
+            
+            <%- partials.featuredMiis %>
+        </div>
+        <%- partials.footer %>
+        <script src="global.js"></script>
+    </body>
+</html>
