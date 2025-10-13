@@ -684,13 +684,79 @@ site.listen(8080, async () => {
         fs.mkdirSync('./static/privateMiiQRs', { recursive: true });
     }
 
-    // Migrate existing official Miis to have officialCategories array
-    Object.keys(storage.miis).forEach(miiId => {
-        const mii = storage.miis[miiId];
-        if (mii.official && !mii.officialCategories) {
-            mii.officialCategories = [];
+    // Migrate old flat category structure to nested structure
+    if (storage.officialCategories && !storage.officialCategories.categories) {
+        console.log("Migrating old category structure to nested format...");
+        
+        const oldCategories = storage.officialCategories;
+        const newCategories = { categories: [] };
+        
+        // Convert old structure to new
+        Object.keys(oldCategories).forEach(parentName => {
+            const parent = oldCategories[parentName];
+            const newParent = {
+                name: parentName,
+                color: parent.color || "#999999",
+                path: parentName,
+                children: []
+            };
+            
+            if (parent.subcategories && Array.isArray(parent.subcategories)) {
+                parent.subcategories.forEach(subcat => {
+                    newParent.children.push({
+                        name: subcat,
+                        color: parent.color || "#999999",
+                        path: `${parentName}/${subcat}`,
+                        children: []
+                    });
+                });
+            }
+            
+            newCategories.categories.push(newParent);
+        });
+        
+        storage.officialCategories = newCategories;
+        
+        // Update all official Miis to use paths
+        let miisUpdated = 0;
+        Object.values(storage.miis).forEach(mii => {
+            if (mii.official && mii.officialCategories) {
+                // Convert old category names to paths
+                const newCategories = [];
+                mii.officialCategories.forEach(oldCat => {
+                    // Try to find matching path in new structure
+                    const allCats = getAllCategoriesFlat(storage.officialCategories.categories);
+                    const found = allCats.find(c => c.name === oldCat);
+                    if (found) {
+                        newCategories.push(found.path);
+                    }
+                });
+                mii.officialCategories = newCategories;
+                miisUpdated++;
+            }
+        });
+        
+        // Also update private Miis
+        if (storage.privateMiis) {
+            Object.values(storage.privateMiis).forEach(mii => {
+                if (mii.official && mii.officialCategories) {
+                    const newCategories = [];
+                    mii.officialCategories.forEach(oldCat => {
+                        const allCats = getAllCategoriesFlat(storage.officialCategories.categories);
+                        const found = allCats.find(c => c.name === oldCat);
+                        if (found) {
+                            newCategories.push(found.path);
+                        }
+                    });
+                    mii.officialCategories = newCategories;
+                    miisUpdated++;
+                }
+            });
         }
-    });
+        
+        save();
+        console.log(`Migration complete. Updated ${miisUpdated} Miis to use category paths.`);
+    }
 
     console.log("Migration complete - all official Miis have officialCategories arrays");
 
@@ -975,16 +1041,19 @@ site.get('/official', (req, res) => {
     // Get all official Miis
     let officialMiis = Object.values(storage.miis).filter(mii => mii.official);
     
-    // Get all unique categories across all official Miis
-    const allCategories = new Set();
-    officialMiis.forEach(mii => {
-        if (mii.officialCategories && Array.isArray(mii.officialCategories)) {
-            mii.officialCategories.forEach(cat => allCategories.add(cat));
-        }
-    });
+    // Get all unique leaf categories (only categories that can be assigned to Miis)
+    const leafCategories = getAllLeafCategories(storage.officialCategories.categories);
     
-    // Sort categories alphabetically
-    toSend.availableCategories = Array.from(allCategories).sort();
+    // Create category info with paths for display
+    toSend.availableCategories = leafCategories.map(cat => ({
+        name: cat.name,
+        path: cat.path,
+        color: cat.color,
+        fullPath: cat.path // Show full path for clarity
+    }));
+    
+    // Sort categories by path
+    toSend.availableCategories.sort((a, b) => a.path.localeCompare(b.path));
     
     // Filter by category if specified
     const filterCategory = req.query.category;
@@ -3151,6 +3220,426 @@ site.post('/updateOfficialCategories', async (req, res) => {
         res.json({ okay: false, error: 'Server error' });
     }
 });
+// Get all official categories (nested structure)
+site.get('/getOfficialCategories', (req, res) => {
+    try {
+        if (!storage.officialCategories) {
+            storage.officialCategories = { categories: [] };
+        }
+        res.json({ okay: true, categories: storage.officialCategories.categories });
+    } catch (e) {
+        console.error('Error getting categories:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+
+// Add new category (can be root or nested under a parent)
+site.post('/addCategory', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!canEditOfficial(currentUser)) {
+            return res.json({ okay: false, error: 'Insufficient permissions' });
+        }
+
+        const { name, color, parentPath } = req.body;
+
+        if (!name || !name.trim()) {
+            return res.json({ okay: false, error: 'Category name required' });
+        }
+
+        const categoryName = name.trim();
+        
+        // Determine where to add the category
+        let targetArray;
+        let newPath;
+        
+        if (!parentPath) {
+            // Add as root category
+            targetArray = storage.officialCategories.categories;
+            newPath = categoryName;
+            
+            // Check if already exists at root
+            if (targetArray.find(c => c.name === categoryName)) {
+                return res.json({ okay: false, error: 'Category already exists at this level' });
+            }
+        } else {
+            // Add as child of parent
+            const parent = findCategoryByPath(parentPath);
+            if (!parent) {
+                return res.json({ okay: false, error: 'Parent category not found' });
+            }
+            
+            targetArray = parent.children;
+            newPath = `${parentPath}/${categoryName}`;
+            
+            // Check if already exists under this parent
+            if (targetArray.find(c => c.name === categoryName)) {
+                return res.json({ okay: false, error: 'Category already exists under this parent' });
+            }
+        }
+
+        const newCategory = {
+            name: categoryName,
+            color: color || "#999999",
+            path: newPath,
+            children: []
+        };
+        
+        targetArray.push(newCategory);
+
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '📁 New Category Created',
+                description: `${req.cookies.username} created a new category`,
+                color: parseInt(color?.replace('#', '') || '999999', 16),
+                fields: [
+                    {
+                        name: 'Category Name',
+                        value: categoryName,
+                        inline: true
+                    },
+                    {
+                        name: 'Path',
+                        value: newPath,
+                        inline: true
+                    },
+                    {
+                        name: 'Parent',
+                        value: parentPath || 'Root',
+                        inline: true
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true, categories: storage.officialCategories.categories });
+    } catch (e) {
+        console.error('Error adding category:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+
+// Rename category and update all Miis using it or its descendants
+site.post('/renameCategory', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!canEditOfficial(currentUser)) {
+            return res.json({ okay: false, error: 'Insufficient permissions' });
+        }
+
+        const { path, newName } = req.body;
+
+        if (!path || !newName || !newName.trim()) {
+            return res.json({ okay: false, error: 'Path and new name required' });
+        }
+
+        const category = findCategoryByPath(path);
+        if (!category) {
+            return res.json({ okay: false, error: 'Category not found' });
+        }
+
+        const newNameTrimmed = newName.trim();
+        const oldName = category.name;
+        const oldPath = category.path;
+
+        // Check if sibling with same name exists
+        const parent = findParentByChildPath(path);
+        const siblings = parent ? parent.children : storage.officialCategories.categories;
+        if (siblings.find(c => c.name === newNameTrimmed && c.path !== path)) {
+            return res.json({ okay: false, error: 'A category with this name already exists at this level' });
+        }
+
+        // Get all paths that will change (this category and all descendants)
+        const pathsToUpdate = getAllDescendantPaths(category);
+        
+        // Update the name
+        category.name = newNameTrimmed;
+        
+        // Rebuild paths for this category and all descendants
+        const parentPath = path.substring(0, path.lastIndexOf('/'));
+        updateCategoryPaths(category, parentPath);
+        
+        // Get new paths after update
+        const newPaths = getAllDescendantPaths(category);
+        
+        // Update all Miis that use any of these paths
+        let totalUpdated = 0;
+        for (let i = 0; i < pathsToUpdate.length; i++) {
+            const updated = renameCategoryInAllMiis(pathsToUpdate[i], newPaths[i]);
+            totalUpdated += updated;
+        }
+
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '✏️ Category Renamed',
+                description: `${req.cookies.username} renamed a category`,
+                color: parseInt(category.color?.replace('#', '') || '999999', 16),
+                fields: [
+                    {
+                        name: 'Old Name',
+                        value: oldName,
+                        inline: true
+                    },
+                    {
+                        name: 'New Name',
+                        value: newNameTrimmed,
+                        inline: true
+                    },
+                    {
+                        name: 'Old Path',
+                        value: oldPath,
+                        inline: false
+                    },
+                    {
+                        name: 'New Path',
+                        value: category.path,
+                        inline: false
+                    },
+                    {
+                        name: 'Miis Updated',
+                        value: totalUpdated.toString(),
+                        inline: true
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true, categories: storage.officialCategories.categories, updatedMiis: totalUpdated });
+    } catch (e) {
+        console.error('Error renaming category:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+
+// Delete category and all its descendants, remove from all Miis
+site.post('/deleteCategory', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!canEditOfficial(currentUser)) {
+            return res.json({ okay: false, error: 'Insufficient permissions' });
+        }
+
+        const { path } = req.body;
+
+        if (!path) {
+            return res.json({ okay: false, error: 'Category path required' });
+        }
+
+        const category = findCategoryByPath(path);
+        if (!category) {
+            return res.json({ okay: false, error: 'Category not found' });
+        }
+
+        // Get all paths to remove (category and all descendants)
+        const pathsToRemove = getAllDescendantPaths(category);
+        
+        // Remove from parent's children array
+        const parent = findParentByChildPath(path);
+        if (parent) {
+            parent.children = parent.children.filter(c => c.path !== path);
+        } else {
+            // Remove from root
+            storage.officialCategories.categories = storage.officialCategories.categories.filter(c => c.path !== path);
+        }
+        
+        // Remove all paths from all Miis
+        let totalUpdated = 0;
+        pathsToRemove.forEach(pathToRemove => {
+            const updated = removeCategoryFromAllMiis(pathToRemove);
+            totalUpdated += updated;
+        });
+
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '🗑️ Category Deleted',
+                description: `${req.cookies.username} deleted a category and all its descendants`,
+                color: 0xFF0000,
+                fields: [
+                    {
+                        name: 'Category',
+                        value: category.name,
+                        inline: true
+                    },
+                    {
+                        name: 'Path',
+                        value: path,
+                        inline: true
+                    },
+                    {
+                        name: 'Descendants Deleted',
+                        value: (pathsToRemove.length - 1).toString(),
+                        inline: true
+                    },
+                    {
+                        name: 'Miis Updated',
+                        value: totalUpdated.toString(),
+                        inline: true
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true, categories: storage.officialCategories.categories, updatedMiis: totalUpdated });
+    } catch (e) {
+        console.error('Error deleting category:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
+
+// Move category to a new parent
+site.post('/moveCategory', async (req, res) => {
+    try {
+        if (!req.cookies.username || !req.cookies.token) {
+            return res.json({ okay: false, error: 'Not authenticated' });
+        }
+
+        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
+            return res.json({ okay: false, error: 'Invalid token' });
+        }
+
+        const currentUser = storage.users[req.cookies.username];
+        if (!canEditOfficial(currentUser)) {
+            return res.json({ okay: false, error: 'Insufficient permissions' });
+        }
+
+        const { categoryPath, newParentPath } = req.body;
+
+        if (!categoryPath) {
+            return res.json({ okay: false, error: 'Category path required' });
+        }
+
+        const category = findCategoryByPath(categoryPath);
+        if (!category) {
+            return res.json({ okay: false, error: 'Category not found' });
+        }
+
+        // Prevent moving to self or descendant
+        if (newParentPath && newParentPath.startsWith(categoryPath + '/')) {
+            return res.json({ okay: false, error: 'Cannot move category to its own descendant' });
+        }
+
+        if (newParentPath === categoryPath) {
+            return res.json({ okay: false, error: 'Cannot move category to itself' });
+        }
+
+        // Get all paths before move
+        const oldPaths = getAllDescendantPaths(category);
+
+        // Remove from current parent
+        const oldParent = findParentByChildPath(categoryPath);
+        if (oldParent) {
+            oldParent.children = oldParent.children.filter(c => c.path !== categoryPath);
+        } else {
+            storage.officialCategories.categories = storage.officialCategories.categories.filter(c => c.path !== categoryPath);
+        }
+
+        // Add to new parent
+        let newParentNode;
+        let newSiblings;
+        if (!newParentPath) {
+            // Move to root
+            newSiblings = storage.officialCategories.categories;
+            newParentNode = null;
+        } else {
+            newParentNode = findCategoryByPath(newParentPath);
+            if (!newParentNode) {
+                return res.json({ okay: false, error: 'New parent category not found' });
+            }
+            newSiblings = newParentNode.children;
+        }
+
+        // Check for name conflict
+        if (newSiblings.find(c => c.name === category.name)) {
+            return res.json({ okay: false, error: 'A category with this name already exists at the destination' });
+        }
+
+        newSiblings.push(category);
+
+        // Update paths
+        updateCategoryPaths(category, newParentPath || '');
+
+        // Get new paths after move
+        const newPaths = getAllDescendantPaths(category);
+
+        // Update all Miis
+        let totalUpdated = 0;
+        for (let i = 0; i < oldPaths.length; i++) {
+            const updated = renameCategoryInAllMiis(oldPaths[i], newPaths[i]);
+            totalUpdated += updated;
+        }
+
+        save();
+
+        makeReport(JSON.stringify({
+            embeds: [{
+                type: 'rich',
+                title: '📦 Category Moved',
+                description: `${req.cookies.username} moved a category`,
+                color: 0x9C27B0,
+                fields: [
+                    {
+                        name: 'Category',
+                        value: category.name,
+                        inline: true
+                    },
+                    {
+                        name: 'Old Path',
+                        value: oldPaths[0],
+                        inline: false
+                    },
+                    {
+                        name: 'New Path',
+                        value: category.path,
+                        inline: false
+                    },
+                    {
+                        name: 'Miis Updated',
+                        value: totalUpdated.toString(),
+                        inline: true
+                    }
+                ]
+            }]
+        }));
+
+        res.json({ okay: true, categories: storage.officialCategories.categories, updatedMiis: totalUpdated });
+    } catch (e) {
+        console.error('Error moving category:', e);
+        res.json({ okay: false, error: 'Server error' });
+    }
+});
 // Get all official categories (for building forms)
 site.get('/getOfficialCategories', (req, res) => {
     try {
@@ -3160,478 +3649,6 @@ site.get('/getOfficialCategories', (req, res) => {
         res.json({ okay: true, categories: storage.officialCategories });
     } catch (e) {
         console.error('Error getting categories:', e);
-        res.json({ okay: false, error: 'Server error' });
-    }
-});
-
-// Add new parent category (Researcher+)
-site.post('/addParentCategory', async (req, res) => {
-    try {
-        if (!req.cookies.username || !req.cookies.token) {
-            return res.json({ okay: false, error: 'Not authenticated' });
-        }
-
-        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
-            return res.json({ okay: false, error: 'Invalid token' });
-        }
-
-        const currentUser = storage.users[req.cookies.username];
-        if (!canEditOfficial(currentUser)) {
-            return res.json({ okay: false, error: 'Insufficient permissions' });
-        }
-
-        const { name, color } = req.body;
-
-        if (!name || !name.trim()) {
-            return res.json({ okay: false, error: 'Category name required' });
-        }
-
-        const categoryName = name.trim();
-
-        if (storage.officialCategories[categoryName]) {
-            return res.json({ okay: false, error: 'Category already exists' });
-        }
-
-        storage.officialCategories[categoryName] = {
-            subcategories: [],
-            color: color || "#999999"
-        };
-
-        save();
-
-        makeReport(JSON.stringify({
-            embeds: [{
-                type: 'rich',
-                title: '📁 New Parent Category Created',
-                description: `${req.cookies.username} created a new parent category`,
-                color: parseInt(color?.replace('#', '') || '999999', 16),
-                fields: [
-                    {
-                        name: 'Category Name',
-                        value: categoryName,
-                        inline: true
-                    }
-                ]
-            }]
-        }));
-
-        res.json({ okay: true, categories: storage.officialCategories });
-    } catch (e) {
-        console.error('Error adding parent category:', e);
-        res.json({ okay: false, error: 'Server error' });
-    }
-});
-
-// Add new subcategory (Researcher+)
-site.post('/addSubcategory', async (req, res) => {
-    try {
-        if (!req.cookies.username || !req.cookies.token) {
-            return res.json({ okay: false, error: 'Not authenticated' });
-        }
-
-        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
-            return res.json({ okay: false, error: 'Invalid token' });
-        }
-
-        const currentUser = storage.users[req.cookies.username];
-        if (!canEditOfficial(currentUser)) {
-            return res.json({ okay: false, error: 'Insufficient permissions' });
-        }
-
-        const { parentCategory, subcategoryName } = req.body;
-
-        if (!parentCategory || !subcategoryName || !subcategoryName.trim()) {
-            return res.json({ okay: false, error: 'Parent category and subcategory name required' });
-        }
-
-        if (!storage.officialCategories[parentCategory]) {
-            return res.json({ okay: false, error: 'Parent category does not exist' });
-        }
-
-        const subName = subcategoryName.trim();
-
-        if (storage.officialCategories[parentCategory].subcategories.includes(subName)) {
-            return res.json({ okay: false, error: 'Subcategory already exists' });
-        }
-
-        storage.officialCategories[parentCategory].subcategories.push(subName);
-
-        save();
-
-        makeReport(JSON.stringify({
-            embeds: [{
-                type: 'rich',
-                title: '🏷️ New Subcategory Created',
-                description: `${req.cookies.username} created a new subcategory`,
-                color: parseInt(storage.officialCategories[parentCategory].color?.replace('#', '') || '999999', 16),
-                fields: [
-                    {
-                        name: 'Parent Category',
-                        value: parentCategory,
-                        inline: true
-                    },
-                    {
-                        name: 'Subcategory',
-                        value: subName,
-                        inline: true
-                    }
-                ]
-            }]
-        }));
-
-        res.json({ okay: true, categories: storage.officialCategories });
-    } catch (e) {
-        console.error('Error adding subcategory:', e);
-        res.json({ okay: false, error: 'Server error' });
-    }
-});
-
-// Rename parent category (Researcher+)
-site.post('/renameParentCategory', async (req, res) => {
-    try {
-        if (!req.cookies.username || !req.cookies.token) {
-            return res.json({ okay: false, error: 'Not authenticated' });
-        }
-
-        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
-            return res.json({ okay: false, error: 'Invalid token' });
-        }
-
-        const currentUser = storage.users[req.cookies.username];
-        if (!canEditOfficial(currentUser)) {
-            return res.json({ okay: false, error: 'Insufficient permissions' });
-        }
-
-        const { oldName, newName } = req.body;
-
-        if (!oldName || !newName || !newName.trim()) {
-            return res.json({ okay: false, error: 'Old and new names required' });
-        }
-
-        if (!storage.officialCategories[oldName]) {
-            return res.json({ okay: false, error: 'Parent category does not exist' });
-        }
-
-        const newNameTrimmed = newName.trim();
-
-        if (storage.officialCategories[newNameTrimmed]) {
-            return res.json({ okay: false, error: 'New name already exists' });
-        }
-
-        // Rename in category structure
-        storage.officialCategories[newNameTrimmed] = storage.officialCategories[oldName];
-        delete storage.officialCategories[oldName];
-
-        save();
-
-        makeReport(JSON.stringify({
-            embeds: [{
-                type: 'rich',
-                title: '✏️ Parent Category Renamed',
-                description: `${req.cookies.username} renamed a parent category`,
-                color: 0x00AAFF,
-                fields: [
-                    {
-                        name: 'Old Name',
-                        value: oldName,
-                        inline: true
-                    },
-                    {
-                        name: 'New Name',
-                        value: newNameTrimmed,
-                        inline: true
-                    }
-                ]
-            }]
-        }));
-
-        res.json({ okay: true, categories: storage.officialCategories });
-    } catch (e) {
-        console.error('Error renaming parent category:', e);
-        res.json({ okay: false, error: 'Server error' });
-    }
-});
-
-// Rename subcategory and update all Miis using it (Researcher+)
-site.post('/renameSubcategory', async (req, res) => {
-    try {
-        if (!req.cookies.username || !req.cookies.token) {
-            return res.json({ okay: false, error: 'Not authenticated' });
-        }
-
-        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
-            return res.json({ okay: false, error: 'Invalid token' });
-        }
-
-        const currentUser = storage.users[req.cookies.username];
-        if (!canEditOfficial(currentUser)) {
-            return res.json({ okay: false, error: 'Insufficient permissions' });
-        }
-
-        const { parentCategory, oldName, newName } = req.body;
-
-        if (!parentCategory || !oldName || !newName || !newName.trim()) {
-            return res.json({ okay: false, error: 'All fields required' });
-        }
-
-        if (!storage.officialCategories[parentCategory]) {
-            return res.json({ okay: false, error: 'Parent category does not exist' });
-        }
-
-        const subcats = storage.officialCategories[parentCategory].subcategories;
-        const index = subcats.indexOf(oldName);
-
-        if (index === -1) {
-            return res.json({ okay: false, error: 'Subcategory does not exist' });
-        }
-
-        const newNameTrimmed = newName.trim();
-
-        if (subcats.includes(newNameTrimmed)) {
-            return res.json({ okay: false, error: 'New name already exists' });
-        }
-
-        // Update in category structure
-        subcats[index] = newNameTrimmed;
-
-        // Update all official Miis that use this subcategory
-        let updatedCount = 0;
-        Object.values(storage.miis).forEach(mii => {
-            if (mii.official && mii.officialCategories && mii.officialCategories.includes(oldName)) {
-                const catIndex = mii.officialCategories.indexOf(oldName);
-                mii.officialCategories[catIndex] = newNameTrimmed;
-                updatedCount++;
-            }
-        });
-
-        // Also check private Miis
-        if (storage.privateMiis) {
-            Object.values(storage.privateMiis).forEach(mii => {
-                if (mii.official && mii.officialCategories && mii.officialCategories.includes(oldName)) {
-                    const catIndex = mii.officialCategories.indexOf(oldName);
-                    mii.officialCategories[catIndex] = newNameTrimmed;
-                    updatedCount++;
-                }
-            });
-        }
-
-        save();
-
-        makeReport(JSON.stringify({
-            embeds: [{
-                type: 'rich',
-                title: '✏️ Subcategory Renamed',
-                description: `${req.cookies.username} renamed a subcategory`,
-                color: parseInt(storage.officialCategories[parentCategory].color?.replace('#', '') || '999999', 16),
-                fields: [
-                    {
-                        name: 'Parent Category',
-                        value: parentCategory,
-                        inline: false
-                    },
-                    {
-                        name: 'Old Name',
-                        value: oldName,
-                        inline: true
-                    },
-                    {
-                        name: 'New Name',
-                        value: newNameTrimmed,
-                        inline: true
-                    },
-                    {
-                        name: 'Miis Updated',
-                        value: updatedCount.toString(),
-                        inline: true
-                    }
-                ]
-            }]
-        }));
-
-        res.json({ okay: true, categories: storage.officialCategories, updatedMiis: updatedCount });
-    } catch (e) {
-        console.error('Error renaming subcategory:', e);
-        res.json({ okay: false, error: 'Server error' });
-    }
-});
-
-// Delete subcategory and remove from all Miis (Researcher+)
-site.post('/deleteSubcategory', async (req, res) => {
-    try {
-        if (!req.cookies.username || !req.cookies.token) {
-            return res.json({ okay: false, error: 'Not authenticated' });
-        }
-
-        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
-            return res.json({ okay: false, error: 'Invalid token' });
-        }
-
-        const currentUser = storage.users[req.cookies.username];
-        if (!canEditOfficial(currentUser)) {
-            return res.json({ okay: false, error: 'Insufficient permissions' });
-        }
-
-        const { parentCategory, subcategoryName } = req.body;
-
-        if (!parentCategory || !subcategoryName) {
-            return res.json({ okay: false, error: 'Parent category and subcategory name required' });
-        }
-
-        if (!storage.officialCategories[parentCategory]) {
-            return res.json({ okay: false, error: 'Parent category does not exist' });
-        }
-
-        const subcats = storage.officialCategories[parentCategory].subcategories;
-        const index = subcats.indexOf(subcategoryName);
-
-        if (index === -1) {
-            return res.json({ okay: false, error: 'Subcategory does not exist' });
-        }
-
-        // Remove from category structure
-        subcats.splice(index, 1);
-
-        // Remove from all official Miis
-        let updatedCount = 0;
-        Object.values(storage.miis).forEach(mii => {
-            if (mii.official && mii.officialCategories && mii.officialCategories.includes(subcategoryName)) {
-                mii.officialCategories = mii.officialCategories.filter(c => c !== subcategoryName);
-                updatedCount++;
-            }
-        });
-
-        // Also check private Miis
-        if (storage.privateMiis) {
-            Object.values(storage.privateMiis).forEach(mii => {
-                if (mii.official && mii.officialCategories && mii.officialCategories.includes(subcategoryName)) {
-                    mii.officialCategories = mii.officialCategories.filter(c => c !== subcategoryName);
-                    updatedCount++;
-                }
-            });
-        }
-
-        save();
-
-        makeReport(JSON.stringify({
-            embeds: [{
-                type: 'rich',
-                title: '🗑️ Subcategory Deleted',
-                description: `${req.cookies.username} deleted a subcategory`,
-                color: 0xFF4444,
-                fields: [
-                    {
-                        name: 'Parent Category',
-                        value: parentCategory,
-                        inline: true
-                    },
-                    {
-                        name: 'Subcategory',
-                        value: subcategoryName,
-                        inline: true
-                    },
-                    {
-                        name: 'Miis Updated',
-                        value: updatedCount.toString(),
-                        inline: true
-                    }
-                ]
-            }]
-        }));
-
-        res.json({ okay: true, categories: storage.officialCategories, updatedMiis: updatedCount });
-    } catch (e) {
-        console.error('Error deleting subcategory:', e);
-        res.json({ okay: false, error: 'Server error' });
-    }
-});
-
-// Delete parent category (Researcher+)
-site.post('/deleteParentCategory', async (req, res) => {
-    try {
-        if (!req.cookies.username || !req.cookies.token) {
-            return res.json({ okay: false, error: 'Not authenticated' });
-        }
-
-        if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
-            return res.json({ okay: false, error: 'Invalid token' });
-        }
-
-        const currentUser = storage.users[req.cookies.username];
-        if (!canEditOfficial(currentUser)) {
-            return res.json({ okay: false, error: 'Insufficient permissions' });
-        }
-
-        const { name } = req.body;
-
-        if (!name) {
-            return res.json({ okay: false, error: 'Category name required' });
-        }
-
-        if (!storage.officialCategories[name]) {
-            return res.json({ okay: false, error: 'Category does not exist' });
-        }
-
-        const subcatsToRemove = storage.officialCategories[name].subcategories;
-
-        // Remove from category structure
-        delete storage.officialCategories[name];
-
-        // Remove all subcategories from all Miis
-        let updatedCount = 0;
-        Object.values(storage.miis).forEach(mii => {
-            if (mii.official && mii.officialCategories) {
-                const originalLength = mii.officialCategories.length;
-                mii.officialCategories = mii.officialCategories.filter(c => !subcatsToRemove.includes(c));
-                if (mii.officialCategories.length !== originalLength) {
-                    updatedCount++;
-                }
-            }
-        });
-
-        // Also check private Miis
-        if (storage.privateMiis) {
-            Object.values(storage.privateMiis).forEach(mii => {
-                if (mii.official && mii.officialCategories) {
-                    const originalLength = mii.officialCategories.length;
-                    mii.officialCategories = mii.officialCategories.filter(c => !subcatsToRemove.includes(c));
-                    if (mii.officialCategories.length !== originalLength) {
-                        updatedCount++;
-                    }
-                }
-            });
-        }
-
-        save();
-
-        makeReport(JSON.stringify({
-            embeds: [{
-                type: 'rich',
-                title: '🗑️ Parent Category Deleted',
-                description: `${req.cookies.username} deleted a parent category`,
-                color: 0xFF0000,
-                fields: [
-                    {
-                        name: 'Category',
-                        value: name,
-                        inline: true
-                    },
-                    {
-                        name: 'Subcategories Removed',
-                        value: subcatsToRemove.length.toString(),
-                        inline: true
-                    },
-                    {
-                        name: 'Miis Updated',
-                        value: updatedCount.toString(),
-                        inline: true
-                    }
-                ]
-            }]
-        }));
-
-        res.json({ okay: true, categories: storage.officialCategories, updatedMiis: updatedCount });
-    } catch (e) {
-        console.error('Error deleting parent category:', e);
         res.json({ okay: false, error: 'Server error' });
     }
 });

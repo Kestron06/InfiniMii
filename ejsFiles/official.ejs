@@ -26,9 +26,13 @@
                             All (<%= displayedMiis.length %>)
                         </a>
                         <% availableCategories.forEach(category => { %>
-                            <a href="/official?category=<%= encodeURIComponent(category) %>" 
-                               class="filter-btn <%= currentFilter === category ? 'active' : '' %>">
-                                <%= category %>
+                            <a href="/official?category=<%= encodeURIComponent(category.path) %>" 
+                            class="filter-btn <%= currentFilter === category.path ? 'active' : '' %>"
+                            style="border-left: 3px solid '<%= category.color %>'">
+                                <%= category.name %>
+                                <% if(category.fullPath) { %>
+                                    <span class="category-path"><%= category.fullPath %></span>
+                                <% } %>
                             </a>
                         <% }); %>
                     </div>
