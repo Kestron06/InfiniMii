@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Amiibo Tools - InfiniMii</title>
+        <link rel='stylesheet' href="global.css">
+        <link rel="stylesheet" href="utilityPages.css">
+        <style>
+            .amiibo-tools {
+                display: flex;
+                flex-direction: column;
+                gap: 2rem;
+                max-width: 800px;
+                margin: 0 auto;
+            }
+            
+            .tool-section {
+                background-color: var(--layer-2);
+                padding: 2rem;
+                border-radius: 10px;
+            }
+            
+            .tool-section h3 {
+                color: var(--brand-color);
+                margin-top: 0;
+                margin-bottom: 1.5rem;
+                font-size: 24px;
+            }
+            
+            .upload-area {
+                border: 2px dashed var(--layer-3);
+                border-radius: 8px;
+                padding: 2rem;
+                text-align: center;
+                margin-bottom: 1rem;
+                background-color: var(--layer-1);
+                transition: all 0.3s ease;
+            }
+            
+            .upload-area:hover {
+                border-color: var(--brand-color);
+                background-color: rgba(255, 255, 255, 0.05);
+            }
+            
+            .upload-area.dragover {
+                border-color: var(--brand-color);
+                background-color: rgba(37, 211, 102, 0.1);
+            }
+            
+            .extracted-mii {
+                display: none;
+                margin-top: 1.5rem;
+                padding: 1.5rem;
+                background-color: var(--layer-1);
+                border-radius: 8px;
+            }
+            
+            .extracted-mii.active {
+                display: block;
+            }
+            
+            .mii-preview {
+                display: flex;
+                gap: 1.5rem;
+                align-items: center;
+                margin-bottom: 1rem;
+            }
+            
+            .mii-preview img {
+                width: 120px;
+                height: 120px;
+                border-radius: 8px;
+                background-color: var(--layer-3);
+            }
+            
+            .mii-info {
+                flex: 1;
+            }
+            
+            .mii-info h4 {
+                margin: 0 0 0.5rem 0;
+                font-size: 20px;
+                color: var(--brand-color);
+            }
+            
+            .mii-info p {
+                margin: 0.25rem 0;
+                color: var(--text-2);
+            }
+            
+            .action-buttons {
+                display: flex;
+                gap: 1rem;
+                flex-wrap: wrap;
+            }
+            
+            .btn {
+                padding: 0.75rem 1.5rem;
+                border: none;
+                border-radius: 6px;
+                font-family: Poppins, sans-serif;
+                font-size: 16px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            
+            .btn-primary {
+                background-color: var(--brand-color);
+                color: white;
+            }
+            
+            .btn-primary:hover {
+                opacity: 0.9;
+                transform: translateY(-1px);
+            }
+            
+            .btn-secondary {
+                background-color: var(--layer-3);
+                color: var(--text-1);
+            }
+            
+            .btn-secondary:hover {
+                background-color: var(--layer-4);
+            }
+            
+            .insert-options {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+                margin-top: 1rem;
+            }
+            
+            .radio-group {
+                display: flex;
+                gap: 2rem;
+                margin: 1rem 0;
+            }
+            
+            .radio-option {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            
+            .radio-option input[type="radio"] {
+                width: auto;
+                margin: 0;
+            }
+            
+            .error-message {
+                color: #ff4444;
+                background-color: rgba(255, 68, 68, 0.1);
+                padding: 1rem;
+                border-radius: 6px;
+                margin-top: 1rem;
+                display: none;
+            }
+            
+            .error-message.active {
+                display: block;
+            }
+            
+            .success-message {
+                color: var(--brand-color);
+                background-color: rgba(37, 211, 102, 0.1);
+                padding: 1rem;
+                border-radius: 6px;
+                margin-top: 1rem;
+                display: none;
+            }
+            
+            .success-message.active {
+                display: block;
+            }
+        </style>
+    </head>
+    <body>
+        <%- partials.header %>
+        <%- partials.accountDisplay %>
+        <div class='content'>
+            <%- partials.sidebar %>
+            <div class='amiibo-tools'>
+                <!-- Extract Mii from Amiibo -->
+                <div class="tool-section">
+                    <h3>📤 Extract Mii from Amiibo</h3>
+                    <p style="color: var(--text-2); margin-bottom: 1.5rem;">
+                        Upload an Amiibo dump (.bin file) to extract the Mii character stored on it.
+                    </p>
+                    
+                    <form id="extractForm" enctype="multipart/form-data">
+                        <div class="upload-area" id="extractDropZone">
+                            <p style="margin: 0 0 1rem 0;">📁 Drag & drop your Amiibo dump here, or click to browse</p>
+                            <input type="file" name="amiibo" id="extractFile" accept=".bin" style="display: none;">
+                            <button type="button" class="btn btn-secondary" onclick="document.getElementById('extractFile').click()">
+                                Choose File
+                            </button>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Extract Mii</button>
+                    </form>
+                    
+                    <div id="extractedMii" class="extracted-mii">
+                        <h4>Extracted Mii</h4>
+                        <div class="mii-preview">
+                            <img id="extractedMiiImage" alt="Mii Preview">
+                            <div class="mii-info">
+                                <h4 id="extractedMiiName">Mii Name</h4>
+                                <p id="extractedMiiCreator">Creator: Unknown</p>
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn btn-primary" onclick="uploadExtractedMii()">Upload to InfiniMii</button>
+                            <a id="downloadExtractedQR" class="btn btn-secondary" download>Download QR Code</a>
+                            <a id="downloadExtractedBin" class="btn btn-secondary" download>Download 3DS Bin</a>
+                        </div>
+                    </div>
+                    
+                    <div id="extractError" class="error-message"></div>
+                </div>
+                
+                <!-- Insert Mii into Amiibo -->
+                <div class="tool-section">
+                    <h3>📥 Insert Mii into Amiibo</h3>
+                    <p style="color: var(--text-2); margin-bottom: 1.5rem;">
+                        Upload an Amiibo dump and choose a Mii to insert into it.
+                    </p>
+                    
+                    <form id="insertForm" enctype="multipart/form-data">
+                        <div class="upload-area" id="insertDropZone">
+                            <p style="margin: 0 0 1rem 0;">📁 Upload Amiibo dump (.bin file)</p>
+                            <input type="file" name="amiibo" id="insertAmiiboFile" accept=".bin" style="display: none;">
+                            <button type="button" class="btn btn-secondary" onclick="document.getElementById('insertAmiiboFile').click()">
+                                Choose Amiibo File
+                            </button>
+                            <p id="insertAmiiboName" style="margin-top: 0.5rem; color: var(--text-2);"></p>
+                        </div>
+                        
+                        <div class="insert-options">
+                            <h4>Select Mii Source</h4>
+                            <div class="radio-group">
+                                <div class="radio-option">
+                                    <input type="radio" id="sourceFile" name="miiSource" value="file" checked>
+                                    <label for="sourceFile">Upload File</label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="sourceMiiId" name="miiSource" value="miiId">
+                                    <label for="sourceMiiId">Use Mii ID</label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="sourceStudio" name="miiSource" value="studio">
+                                    <label for="sourceStudio">Studio Code</label>
+                                </div>
+                            </div>
+                            
+                            <div id="fileUploadSection">
+                                <input type="file" name="mii" id="insertMiiFile" accept=".jpg,.png,.bin">
+                                <select name="miiType" id="miiFileType">
+                                    <option value="3ds">3DS/Wii U QR Code</option>
+                                    <option value="3dsbin">3DS Bin (Encrypted/Decrypted)</option>
+                                    <option value="wii">Wii Bin</option>
+                                </select>
+                            </div>
+                            
+                            <div id="miiIdSection" style="display: none;">
+                                <input type="text" name="miiId" placeholder="Enter Mii ID from InfiniMii">
+                            </div>
+                            
+                            <div id="studioSection" style="display: none;">
+                                <input type="text" name="studioCode" placeholder="Enter Mii Studio hex code">
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Insert Mii & Download</button>
+                    </form>
+                    
+                    <div id="insertError" class="error-message"></div>
+                    <div id="insertSuccess" class="success-message"></div>
+                </div>
+            </div>
+            <%- partials.featuredMiis %>
+        </div>
+        <%- partials.footer %>
+        
+        <script>
+            let extractedMiiData = null;
+            
+            // Extract form handling
+            document.getElementById('extractForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                
+                try {
+                    const response = await fetch('/extractMiiFromAmiibo', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.okay) {
+                        extractedMiiData = result.mii;
+                        document.getElementById('extractedMiiImage').src = '/miiImgs/' + result.mii.id + '.png';
+                        document.getElementById('extractedMiiName').textContent = result.mii.meta.name;
+                        document.getElementById('extractedMiiCreator').textContent = 'Creator: ' + result.mii.meta.creatorName;
+                        document.getElementById('downloadExtractedQR').href = '/miiQRs/' + result.mii.id + '.png';
+                        document.getElementById('downloadExtractedQR').download = result.mii.meta.name + '_QR.png';
+                        document.getElementById('downloadExtractedBin').href = '/downloadMii?id=' + result.mii.id + '&format=3dsbin';
+                        document.getElementById('downloadExtractedBin').download = result.mii.meta.name + '.bin';
+                        document.getElementById('extractedMii').classList.add('active');
+                        document.getElementById('extractError').classList.remove('active');
+                    }
+                    else {
+                        document.getElementById('extractError').textContent = result.error || 'Failed to extract Mii';
+                        document.getElementById('extractError').classList.add('active');
+                        document.getElementById('extractedMii').classList.remove('active');
+                    }
+                } catch (error) {
+                    document.getElementById('extractError').textContent = 'Error: ' + error.message;
+                    document.getElementById('extractError').classList.add('active');
+                }
+            });
+            
+            // Insert form handling
+            document.getElementById('insertForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                
+                try {
+                    const response = await fetch('/insertMiiIntoAmiibo', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'amiibo_modified.bin';
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                        
+                        document.getElementById('insertSuccess').textContent = 'Amiibo modified successfully! Download started.';
+                        document.getElementById('insertSuccess').classList.add('active');
+                        document.getElementById('insertError').classList.remove('active');
+                    }
+                    else {
+                        const result = await response.json();
+                        document.getElementById('insertError').textContent = result.error || 'Failed to insert Mii';
+                        document.getElementById('insertError').classList.add('active');
+                        document.getElementById('insertSuccess').classList.remove('active');
+                    }
+                } catch (error) {
+                    document.getElementById('insertError').textContent = 'Error: ' + error.message;
+                    document.getElementById('insertError').classList.add('active');
+                }
+            });
+            
+            // Radio button handling
+            document.querySelectorAll('input[name="miiSource"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    document.getElementById('fileUploadSection').style.display = e.target.value === 'file' ? 'block' : 'none';
+                    document.getElementById('miiIdSection').style.display = e.target.value === 'miiId' ? 'block' : 'none';
+                    document.getElementById('studioSection').style.display = e.target.value === 'studio' ? 'block' : 'none';
+                });
+            });
+            
+            // File name display
+            document.getElementById('insertAmiiboFile').addEventListener('change', (e) => {
+                if (e.target.files[0]) {
+                    document.getElementById('insertAmiiboName').textContent = 'Selected: ' + e.target.files[0].name;
+                }
+            });
+            
+            // Drag and drop for extract
+            const extractZone = document.getElementById('extractDropZone');
+            extractZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                extractZone.classList.add('dragover');
+            });
+            extractZone.addEventListener('dragleave', () => {
+                extractZone.classList.remove('dragover');
+            });
+            extractZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                extractZone.classList.remove('dragover');
+                document.getElementById('extractFile').files = e.dataTransfer.files;
+            });
+            
+            // Drag and drop for insert
+            const insertZone = document.getElementById('insertDropZone');
+            insertZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                insertZone.classList.add('dragover');
+            });
+            insertZone.addEventListener('dragleave', () => {
+                insertZone.classList.remove('dragover');
+            });
+            insertZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                insertZone.classList.remove('dragover');
+                document.getElementById('insertAmiiboFile').files = e.dataTransfer.files;
+                if (e.dataTransfer.files[0]) {
+                    document.getElementById('insertAmiiboName').textContent = 'Selected: ' + e.dataTransfer.files[0].name;
+                }
+            });
+            
+            async function uploadExtractedMii() {
+                if (!extractedMiiData) return;
+                
+                window.location.href = '/mii?id=' + extractedMiiData.id;
+            }
+        </script>
+    </body>
+</html>

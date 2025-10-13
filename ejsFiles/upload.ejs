@@ -4,6 +4,63 @@
         <title>Upload - InfiniMii</title>
         <link rel='stylesheet' href="global.css">
         <link rel="stylesheet" href="utilityPages.css">
+        <style>
+            .upload-tabs {
+                display: flex;
+                gap: 1rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .tab-button {
+                padding: 0.75rem 1.5rem;
+                border: none;
+                background-color: var(--layer-3);
+                color: var(--text-2);
+                border-radius: 8px 8px 0 0;
+                cursor: pointer;
+                font-family: Poppins, sans-serif;
+                font-size: 16px;
+                transition: all 0.3s ease;
+            }
+            
+            .tab-button.active {
+                background-color: var(--layer-2);
+                color: var(--brand-color);
+                font-weight: 600;
+            }
+            
+            .tab-content {
+                display: none;
+            }
+            
+            .tab-content.active {
+                display: block;
+            }
+            
+            .format-hint {
+                background-color: var(--layer-1);
+                padding: 1rem;
+                border-radius: 6px;
+                margin: 1rem 0;
+                color: var(--text-2);
+                font-size: 14px;
+            }
+            
+            .studio-preview {
+                margin-top: 1rem;
+                display: none;
+            }
+            
+            .studio-preview.active {
+                display: block;
+            }
+            
+            .studio-preview img {
+                max-width: 200px;
+                border-radius: 8px;
+                margin-top: 0.5rem;
+            }
+        </style>
     </head>
     <body>
         <%- partials.header %>
@@ -11,29 +68,138 @@
         <div class='content'>
             <%- partials.sidebar %>
             <div class='upload'>
-                <form action="/uploadMii" method="post" enctype="multipart/form-data" id='uploadForm'>
-                    <fieldset>
-                        <legend>Upload a Mii to the Website</legend>
-                        <a href="/qr">Scan 3DS/Wii U QR Code?</a><br>
-                        <input type="radio" value="3ds" name="type" checked required>
-                        <label for="3ds">3DS/Wii U</label>
-                        <input type="radio" value="wii" name="type">
-                        <label for="wii">Wii</label><br>
-                        <input type="file" name="mii" accept=".mii,.bin,.png,.jpg" required>
-                        <textarea maxlength="250" rows="5" cols="25" placeholder="Description..."
-                            name="desc"></textarea><br>
-                        <% if(users[thisUser] && (users[thisUser].role==='researcher' ||
-                            users[thisUser].role==='administrator' )) { %>
-                            <input type="checkbox" name="official"> <label for="official">This is an <b>exact copy
-                                    of a Mii</b> that appears in a game by default officially (Please mention which
-                                in description). Checking or not checking this box falsely may result in the Mii
-                                being taken down.
-                                <% } %><input type="submit">
-                    </fieldset>
-                </form>
+                <fieldset>
+                    <legend>Upload a Mii to the Website</legend>
+                    
+                    <div class="upload-tabs">
+                        <button class="tab-button active" onclick="switchTab('file')">📁 File Upload</button>
+                        <button class="tab-button" onclick="switchTab('studio')">🎨 Mii Studio</button>
+                        <button class="tab-button" onclick="switchTab('qr')">📸 Scan QR Code</button>
+                    </div>
+                    
+                    <!-- File Upload Tab -->
+                    <div id="fileTab" class="tab-content active">
+                        <form action="/uploadMii" method="post" enctype="multipart/form-data" id='uploadForm'>
+                            <div class="radio-group">
+                                <div class="radio-option">
+                                    <input type="radio" value="3ds" name="type" id="type3ds" checked>
+                                    <label for="type3ds">3DS/Wii U QR Code</label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" value="3dsbin" name="type" id="type3dsbin">
+                                    <label for="type3dsbin">3DS Bin (Encrypted/Decrypted)</label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" value="wii" name="type" id="typewii">
+                                    <label for="typewii">Wii Bin</label>
+                                </div>
+                            </div>
+                            
+                            <div class="format-hint">
+                                <strong>Supported formats:</strong><br>
+                                • 3DS/Wii U: .jpg, .png QR codes<br>
+                                • 3DS Bin: .bin files (both encrypted and decrypted)<br>
+                                • Wii: .mii, .bin files
+                            </div>
+                            
+                            <input type="file" name="mii" accept=".mii,.bin,.png,.jpg" required>
+                            
+                            <textarea maxlength="250" rows="5" placeholder="Description..." name="desc"></textarea>
+                            
+                            <% if(users[thisUser] && (users[thisUser].roles && (users[thisUser].roles.includes('researcher') || users[thisUser].roles.includes('administrator')))) { %>
+                                <div style="margin: 1rem 0;">
+                                    <input type="checkbox" name="official" id="officialCheck">
+                                    <label for="officialCheck">
+                                        This is an <b>exact copy of a Mii</b> that appears in a game by default officially 
+                                        (Please mention which in description). Checking or not checking this box falsely may 
+                                        result in the Mii being taken down.
+                                    </label>
+                                </div>
+                            <% } %>
+                            
+                            <input type="submit" value="Upload Mii">
+                        </form>
+                    </div>
+                    
+                    <!-- Studio Tab -->
+                    <div id="studioTab" class="tab-content">
+                        <form action="/uploadStudioMii" method="post" id='studioForm'>
+                            <p style="color: var(--text-2); margin-bottom: 1rem;">
+                                Upload a Mii using the Studio format hex code or by pasting a Studio URL.
+                            </p>
+                            
+                            <label for="studioCode">Studio Code or URL:</label>
+                            <input type="text" name="studioCode" id="studioCode" 
+                                   placeholder="Enter Studio hex code or paste Studio URL" required>
+                            
+                            <div class="studio-preview" id="studioPreview">
+                                <p>Preview:</p>
+                                <img id="studioPreviewImg" alt="Mii Preview">
+                            </div>
+                            
+                            <textarea maxlength="250" rows="5" placeholder="Description..." name="desc"></textarea>
+                            
+                            <% if(users[thisUser] && (users[thisUser].roles && (users[thisUser].roles.includes('researcher') || users[thisUser].roles.includes('administrator')))) { %>
+                                <div style="margin: 1rem 0;">
+                                    <input type="checkbox" name="official" id="studioOfficialCheck">
+                                    <label for="studioOfficialCheck">
+                                        This is an <b>exact copy of a Mii</b> that appears in a game by default officially 
+                                        (Please mention which in description).
+                                    </label>
+                                </div>
+                            <% } %>
+                            
+                            <input type="submit" value="Upload from Studio">
+                        </form>
+                    </div>
+                    
+                    <!-- QR Scan Tab -->
+                    <div id="qrTab" class="tab-content">
+                        <p style="color: var(--text-2); margin-bottom: 1rem;">
+                            Scan a 3DS/Wii U QR code directly using your device's camera.
+                        </p>
+                        <a href="/qr" class="btn btn-primary">Go to QR Scanner</a>
+                    </div>
+                </fieldset>
             </div>
             <%- partials.featuredMiis %>
         </div>
         <%- partials.footer %>
+        
+        <script>
+            function switchTab(tab) {
+                // Update buttons
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                event.target.classList.add('active');
+                
+                // Update content
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                document.getElementById(tab + 'Tab').classList.add('active');
+            }
+            
+            // Studio code preview
+            document.getElementById('studioCode').addEventListener('input', function(e) {
+                let code = e.target.value.trim();
+                
+                // Extract code from URL if pasted
+                if (code.includes('studio.mii.nintendo.com')) {
+                    const match = code.match(/data=([0-9a-fA-F]+)/);
+                    if (match) {
+                        code = match[1];
+                        e.target.value = code;
+                    }
+                }
+                
+                // Show preview if valid hex code
+                if (/^[0-9a-fA-F]+$/.test(code) && code.length >= 88) {
+                    document.getElementById('studioPreviewImg').src = 
+                        `https://studio.mii.nintendo.com/miis/image.png?data=${code}&type=face&width=512&instanceCount=1`;
+                    document.getElementById('studioPreview').classList.add('active');
+                }
+                else {
+                    document.getElementById('studioPreview').classList.remove('active');
+                }
+            });
+        </script>
     </body>
 </html>

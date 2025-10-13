@@ -309,7 +309,8 @@
                         if (result.okay) {
                             alert(`User temporarily banned for ${hours} hours`);
                             location.reload();
-                        } else {
+                        }
+                        else {
                             alert(`Error: ${result.error}`);
                         }
                     } catch (error) {
@@ -343,7 +344,8 @@
                         if (result.okay) {
                             alert('User permanently banned and deleted');
                             window.location.href = '/';
-                        } else {
+                        }
+                        else {
                             alert(`Error: ${result.error}`);
                         }
                     } catch (error) {
@@ -374,7 +376,8 @@
                         if (result.okay) {
                             alert(`Deleted ${result.deletedCount} Miis`);
                             location.reload();
-                        } else {
+                        }
+                        else {
                             alert(`Error: ${result.error}`);
                         }
                     } catch (error) {
@@ -406,7 +409,8 @@
                         if (result.okay) {
                             alert('Username changed successfully!');
                             window.location.href = `/user?user=${encodeURIComponent(newUsername)}`;
-                        } else {
+                        }
+                        else {
                             alert(`Error: ${result.error}`);
                         }
                     } catch (error) {
@@ -438,7 +442,8 @@
                         if (result.okay) {
                             alert('Profile picture changed successfully!');
                             location.reload();
-                        } else {
+                        }
+                        else {
                             alert(`Error: ${result.error}`);
                         }
                     } catch (error) {

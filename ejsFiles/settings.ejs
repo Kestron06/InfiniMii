@@ -88,7 +88,8 @@
 					if (result.okay) {
 						alert('Profile picture changed successfully!');
 						location.reload();
-					} else {
+					}
+                    else {
 						alert(result.msg || 'Error changing profile picture');
 					}
 				} catch (error) {
@@ -114,7 +115,8 @@
 					if (result.okay) {
 						alert('Username changed successfully! Please log in again.');
 						window.location.href = '/login';
-					} else {
+					}
+                    else {
 						alert(result.msg || 'Error changing username');
 					}
 				} catch (error) {
@@ -145,7 +147,8 @@
 						alert('Email changed successfully!');
 						document.getElementById('oEmail').value = '';
 						document.getElementById('nEmail').value = '';
-					} else {
+					}
+                    else {
 						alert(result.msg || 'Error changing email');
 					}
 				} catch (error) {
@@ -181,7 +184,8 @@
 						alert('Password changed successfully!');
 						document.getElementById('oPass').value = '';
 						document.getElementById('nPass').value = '';
-					} else {
+					}
+                    else {
 						alert(result.msg || 'Error changing password');
 					}
 				} catch (error) {
@@ -211,7 +215,8 @@
 					if (result.okay) {
 						alert(`Successfully deleted ${result.deletedCount} Miis`);
 						location.reload();
-					} else {
+					}
+                    else {
 						alert(result.msg || 'Error deleting Miis');
 					}
 				} catch (error) {
@@ -249,7 +254,8 @@
 					if (result.okay) {
 						alert('Account deleted successfully. Goodbye!');
 						window.location.href = '/';
-					} else {
+					}
+                    else {
 						alert(result.msg || 'Error deleting account');
 					}
 				} catch (error) {

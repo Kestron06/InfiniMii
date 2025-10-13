@@ -549,3 +549,58 @@ h6 b,
 .guide-container article h4 .copy-link-btn {
     font-size: 0.85rem;
 }
+
+/* QR page form transitions */
+.qr[hidden],
+.upload[hidden],
+.convert[hidden] {
+    display: none;
+}
+
+/* Ensure upload and convert forms on QR page maintain proper styling */
+form.upload,
+form.convert {
+    background-color: var(--layer-2);
+    border: 2px solid #202020;
+    border-radius: 25px;
+    padding: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* Fix description input on QR upload form */
+.upload input[name="desc"] {
+    width: 100%;
+    margin: 0.5rem 0;
+}
+
+/* Fix label spacing on QR upload form */
+.upload label,
+.convert label {
+    display: inline;
+    margin: 0;
+}
+
+/* Fix checkbox on QR upload form */
+.upload input[type="checkbox"],
+.convert input[type="checkbox"] {
+    width: auto;
+    margin-right: 8px;
+    display: inline-block;
+}
+
+/* Make the select dropdown text visible */
+.convert select {
+    color: var(--text-1);
+}
+
+/* Proper spacing for QR page forms */
+.upload fieldset,
+.convert fieldset {
+    margin: 0;
+}
+
+.upload input[type="submit"],
+.convert input[type="submit"] {
+    margin-top: 1rem;
+}

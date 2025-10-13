@@ -7,8 +7,6 @@
       - Allow up to a certain number of these per user, things like family and friends you want saved between consoles without being public  
    - Published Miis
       - No cap on published Miis you can have, these are in the public space for everyone to see.
- - Add Mii Studio codes as download, upload, and conversion options.
-    - Write converting from Studio to 3DS
 
 ## Events/Games
  - CheckMiiOut
