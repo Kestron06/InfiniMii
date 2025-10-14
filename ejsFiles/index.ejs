@@ -1,32 +1,43 @@
 <!DOCTYPE html>
-<html>
-	<head>
-		<title><%= title %></title>
-		<link href="./global.css" rel="stylesheet">
-		<link href="./index.css" rel="stylesheet">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	</head>
-	<body>
-		<%- partials.header %>
-        <%- partials.accountDisplay %>
-		<div class="content">
-			<%- partials.sidebar %>
-			<div id="browse-miis">
-				<% Object.keys(miiCategories).forEach(cat=>{ %>
-					<div class="miiCategory">
-						<h1><a href="<%= miiCategories[cat].link %>"><%= cat %></a></h1>
-						<% miiCategories[cat].miis.forEach(mii=>{ %>
-							<a class="miiThumb" href="/mii?id=<%= mii.id %>">
-								<img src="./miiImgs/<%= mii.id %>.jpg">
-								<h3><%= mii.meta.name %></h3>
-							</a>
-						<% }); %>
-					</div>
-				<% }); %>
-			</div>
-			<%- partials.featuredMiis %>
-		</div>
-        <%- partials.footer %>
-		<script src="global.js"></script>
-	</body>
+<html lang="en">
+<head>
+    <%- partials.metaTags %>
+    <%- partials.structuredData %>
+    <link href="./global.css" rel="stylesheet">
+    <link href="./index.css" rel="stylesheet">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" as="image" href="/banner.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+</head>
+<body>
+    <%- partials.header %>
+    <%- partials.accountDisplay %>
+    
+    <main class="content" role="main">
+        <%- partials.sidebar %>
+        
+        <section id="browse-miis" aria-label="Browse Mii Categories">
+            <% Object.keys(miiCategories).forEach(cat=>{ %>
+                <article class="miiCategory">
+                    <h1><a href="<%= miiCategories[cat].link %>"><%= cat %></a></h1>
+                    <div class="mii-grid">
+                        <% miiCategories[cat].miis.forEach(mii=>{ %>
+                            <a class="miiThumb" href="/mii/<%= mii.id %>" aria-label="<%= mii.meta.name %> Mii Character">
+                                <img src="./miiImgs/<%= mii.id %>.jpg" alt="<%= mii.meta.name %> Mii" loading="lazy" width="200" height="200">
+                                <h3><%= mii.meta.name %></h3>
+                            </a>
+                        <% }); %>
+                    </div>
+                </article>
+            <% }); %>
+        </section>
+        
+        <%- partials.featuredMiis %>
+    </main>
+    
+    <%- partials.footer %>
+    <script src="global.js" defer></script>
+</body>
 </html>

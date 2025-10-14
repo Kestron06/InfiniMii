@@ -16,11 +16,11 @@
             <div id="browse-miis">
                 <% for(var i=0;i<displayedMiis.length&&i<50;i++){ %>
                     <div class="mii-card" id="<%= displayedMiis[i].id %>">
-                        <a href=<%='/mii?id=' +displayedMiis[i].id %>><img src="miiImgs/<%= displayedMiis[i].id %>.jpg"></a>
+                        <a href=<%='/mii/' +displayedMiis[i].id %>><img src="miiImgs/<%= displayedMiis[i].id %>.jpg"></a>
                         <div class="flex">
                             <div>
                                 <h3><%= displayedMiis[i].meta.name %></h3>
-                                <a href=<%="/user?user=" +encodeURIComponent(displayedMiis[i].uploader) %>><%=displayedMiis[i].uploader %></a>
+                                <a href=<%="/user/" +encodeURIComponent(displayedMiis[i].uploader) %>><%=displayedMiis[i].uploader %></a>
                                 <p><%= displayedMiis[i].desc.length>75?displayedMiis[i].desc.slice(0,73)+"...":displayedMiis[i].desc %></p>
                             </div>
                         </div>

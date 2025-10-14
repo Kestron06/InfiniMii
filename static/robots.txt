@@ -1,0 +1,17 @@
+# robots.txt for InfiniMii
+User-agent: *
+Allow: /
+Allow: /mii/
+Allow: /user/
+Allow: /miiImgs/
+Allow: /miiQRs/
+Sitemap: https://infinimii.com/sitemap.xml
+Sitemap: https://infinimii.com/sitemap-miis.xml
+Sitemap: https://infinimii.com/sitemap-users.xml
+
+# Crawl-delay for specific bots (optional, helps with server load)
+User-agent: GPTBot
+Crawl-delay: 2
+
+User-agent: CCBot
+Crawl-delay: 2
