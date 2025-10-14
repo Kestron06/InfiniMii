@@ -1,109 +1,396 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
     <head>
-        <%
-        // Set page-specific variables for meta tags
-        const pageTitle = `${mii.meta.name} - InfiniMii | Download Mii Character`;
-        const pageDesc = mii.desc || `Download ${mii.meta.name} Mii character${mii.official ? ' (Official Nintendo Mii)' : ''} for Wii, 3DS, Wii U, Switch. Get QR code and convert to any format.`;
-        const canonicalUrl = `https://yourdomain.com/mii/${mii.id}`;
-        const ogImage = `https://yourdomain.com/miiImgs/${mii.id}.jpg`;
-        const ogType = 'article';
-        const keywords = `${mii.meta.name}, ${mii.official ? 'official ' : ''}mii character, download mii, mii qr code`;
-        const breadcrumbs = [
-            { name: 'Home', url: '/' },
-            { name: mii.official ? 'Official Miis' : 'Community Miis', url: mii.official ? '/official' : '/top' },
-            { name: mii.meta.name, url: `/mii/${mii.id}` }
-        ];
-        %>
-        
-        <%- include('../ejsPartials/metaTags', { title: pageTitle, description: pageDesc, canonicalUrl, ogImage, ogType, keywords }) %>
-        <%- include('../ejsPartials/structuredData', { breadcrumbs }) %>
-        <%- include('../ejsPartials/miiSchema', { mii }) %>
-        
+        <title><%= mii.meta.name %> - InfiniMii</title>
+        <meta content="<%= mii.meta.name %>" property="og:title" />
+        <meta content="<%= mii.desc %>" property="og:description" />
+        <meta content="https://miis.kestron.com/mii?id=<%= mii.id %>" property="og:url" />
+        <meta content="https://miis.kestron.com/miiImgs/<%= mii.id %>.jpg" property="og:image" />
+        <meta content="#ff0000" data-react-helmet="true" name="theme-color" />
         <link rel="stylesheet" href="global.css">
         <link rel="stylesheet" href="miiPage.css">
-        
-        <!-- Preload hero image -->
-        <link rel="preload" as="image" href="/miiImgs/<%= mii.id %>.jpg">
     </head>
     <body>
+        <% 
+            const imgPath = isPrivate ? 'privateMiiImgs' : 'miiImgs';
+            const qrPath = isPrivate ? 'privateMiiQRs' : 'miiQRs';
+        %>
         <%- partials.header %>
         <%- partials.accountDisplay %>
-        
-        <main class="content" role="main">
+        <div class="content">
             <%- partials.sidebar %>
 
-            <article class="mii-id-card" itemscope itemtype="https://schema.org/CreativeWork">
+            <div class="mii-id-card">
                 <!-- Card Header -->
-                <header class="id-card-header">
-                    <h1 itemprop="name"><%= mii.meta.name %></h1>
-                    <div class="card-number" onclick="copyId()" role="button" tabindex="0" aria-label="Copy Mii ID">ID: <%= mii.id %></div>
-                </header>
+                <div class="id-card-header">
+                    <h2>Mii ID Card</h2>
+                    <div class="card-number" onclick="copyId()">ID: <%= mii.id %></div>
+                </div>
 
                 <!-- Main Card Body -->
                 <div class="id-card-body">
                     <!-- Left side: Mii Image -->
-                    <figure class="id-card-photo">
-                        <img src="/miiImgs/<%= mii.id %>.jpg" 
-                            alt="<%= mii.meta.name %> Mii Character Face" 
-                            itemprop="image"
-                            width="400" 
-                            height="400"
-                            fetchpriority="high">
-                        <figcaption class="qr-code">
-                            <a href="/miiQRs/<%= mii.id %>.jpg" target="_blank" rel="noopener" aria-label="View QR Code for <%= mii.meta.name %>">
-                                <img src="/miiQRs/<%= mii.id %>.jpg" 
-                                    alt="QR Code for <%= mii.meta.name %> - Scan with 3DS, Wii U, Tomodachi Life, or Miitomo" 
-                                    width="200" 
-                                    height="200"
-                                    loading="lazy">
+                    <div class="id-card-photo">
+                        <img src="/<%= imgPath %>/<%= mii.id %>.jpg" 
+                            onerror="this.src='/<%= imgPath %>/<%= mii.id %>.png'"
+                            alt="<%= mii.meta?.name || mii.name %>">
+                        <div class="qr-code">
+                            <a href="/<%= qrPath %>/<%= mii.id %>.jpg" target="_blank">
+                                <img src="/<%= qrPath %>/<%= mii.id %>.jpg" 
+                                    onerror="this.src='/<%= qrPath %>/<%= mii.id %>.png'"
+                                    alt="QR Code">
                             </a>
-                            <a href="/miiQRs/<%= mii.id %>.jpg" target="_blank" rel="noopener">
-                                <span>Download 3DS/Wii U QR Code</span>
+                            <a href="/<%= qrPath %>/<%= mii.id %>.jpg" target="_blank">
+                                <span>Download for 3DS</span>
                             </a>
-                        </figcaption>
-                    </figure>
+                        </div>
+                    </div>
 
                     <!-- Right side: Information -->
                     <div class="id-card-info">
-                        <% if(mii.meta.creatorName?.length>0){ %>
-                        <div class="info-item">
-                            <span class="info-label">Creator Name</span>
-                            <span class="info-value" itemprop="creator"><%= mii.meta.creatorName %></span>
-                        </div>
-                        <% } %>
+                        <h1 class="mii-name"><%= mii.meta.name %></h1>
                         
-                        <div class="info-item">
-                            <span class="info-label">Uploaded By</span>
-                            <span class="info-value">
-                                <a href="/user/<%= encodeURIComponent(mii.uploader) %>"><%= mii.uploader %></a>
-                                <% if (mii.official) { %><span class="badge official-badge">Official Nintendo Mii</span><% } %>
-                            </span>
-                        </div>
-                        
-                        <% if (mii.desc) { %>
-                        <div class="info-item description">
-                            <span class="info-label">Description</span>
-                            <p itemprop="description"><%= mii.desc %></p>
-                        </div>
-                        <% } %>
-                        
-                        <div class="info-item">
-                            <span class="info-label">Uploaded</span>
-                            <time datetime="<%= new Date(mii.uploadedOn).toISOString() %>" itemprop="datePublished">
-                                <%= new Date(mii.uploadedOn).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %>
-                            </time>
-                        </div>
-                        
-                        <div class="info-item">
-                            <span class="info-label">Likes</span>
-                            <span class="info-value" itemprop="interactionStatistic" itemscope itemtype="https://schema.org/InteractionCounter">
-                                <meta itemprop="interactionType" content="https://schema.org/LikeAction">
-                                <meta itemprop="userInteractionCount" content="<%= mii.votes || 0 %>">
-                                <%= mii.votes || 0 %>
-                            </span>
+                        <div class="info-grid">
+                            <% if(mii.meta.creatorName?.length>0){ %>
+                            <div class="info-item">
+                                <span class="info-label">Creator Name</span>
+                                <span class="info-value"><%= mii.meta.creatorName %></span>
+                            </div>
+                            <% } %>
+                            
+                            <div class="info-item">
+                                <span class="info-label">Birthday</span>
+                                <span class="info-value"><%= ["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][mii.general.birthMonth] %> <%= mii.general.birthday>0?mii.general.birthday:"Not Set" %></span>
+                            </div>
+
+                            <% if(mii.general.height !== undefined) { %>
+                            <div class="info-item">
+                                <span class="info-label">Height</span>
+                                <span class="info-value"><%= `${height.feet}' ${height.inches}"` %></span>
+                            </div>
+                            <% } %>
+
+                            <% if(mii.general.weight !== undefined) { %>
+                            <div class="info-item">
+                                <span class="info-label">Weight [Experimental]</span>
+                                <span class="info-value"><%= Math.round(weight.pounds) %>lbs</span>
+                            </div>
+                            <% } %>
+
+                            <% if(mii.general.favoriteColor !== undefined) { %>
+                            <div class="info-item">
+                                <span class="info-label">Favorite Color</span>
+                                <span class="info-value"><%= ["Red", "Orange", "Yellow", "Lime", "Green", "Blue", "Cyan", "Pink", "Purple", "Brown", "White", "Black"][mii.general.favoriteColor] %></span>
+                            </div>
+                            <% } %>
+                            <% if(mii.official && users[thisUser] && (users[thisUser].roles.includes('researcher') || 
+                                           users[thisUser].roles.includes('moderator') ||
+                                           users[thisUser].roles.includes('administrator'))) { %>
+                                <script>
+                                const currentCategories = '<%- JSON.stringify(mii.officialCategories || []) %>';
+                                let officialCategories = [];
+                                let selectedPaths = new Set(currentCategories);
+                                let expandedNodes = new Set();
+
+                                async function loadCategoriesForEditor() {
+                                    try {
+                                        const response = await fetch('/getOfficialCategories');
+                                        const data = await response.json();
+                                        
+                                        if (data.okay) {
+                                            officialCategories = data.categories;
+                                            // Auto-expand paths that contain selected categories
+                                            currentCategories.forEach(path => {
+                                                const parts = path.split('/');
+                                                let currentPath = '';
+                                                parts.forEach((part, index) => {
+                                                    currentPath += (index > 0 ? '/' : '') + part;
+                                                    if (index < parts.length - 1) {
+                                                        expandedNodes.add(currentPath);
+                                                    }
+                                                });
+                                            });
+                                            return true;
+                                        }
+                                        return false;
+                                    } catch (error) {
+                                        console.error('Error loading categories:', error);
+                                        return false;
+                                    }
+                                }
+
+                                async function openCategoryEditor() {
+                                    const loaded = await loadCategoriesForEditor();
+                                    
+                                    if (!loaded) {
+                                        alert('Error loading categories');
+                                        return;
+                                    }
+                                    
+                                    const modal = document.createElement('div');
+                                    modal.style.cssText = `
+                                        position: fixed;
+                                        top: 0;
+                                        left: 0;
+                                        width: 100%;
+                                        height: 100%;
+                                        background: rgba(0,0,0,0.5);
+                                        display: flex;
+                                        justify-content: center;
+                                        align-items: center;
+                                        z-index: 10000;
+                                    `;
+                                    
+                                    const modalContent = document.createElement('div');
+                                    modalContent.style.cssText = `
+                                        background: white;
+                                        padding: 30px;
+                                        border-radius: 12px;
+                                        max-width: 800px;
+                                        width: 90%;
+                                        max-height: 90vh;
+                                        display: flex;
+                                        flex-direction: column;
+                                    `;
+                                    
+                                    modalContent.innerHTML = `
+                                        <h3 style="margin-top: 0;">Select Categories</h3>
+                                        <p style="color: #666; margin-bottom: 20px;">Check all categories that apply. Only leaf categories (without children) can be selected.</p>
+                                        <div style="flex: 1; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #f9f9f9;">
+                                            <div id="modalCategoryTree"></div>
+                                        </div>
+                                        <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                                            <button onclick="closeCategoryModal()" 
+                                                    style="padding: 10px 20px; border: 2px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                                                Cancel
+                                            </button>
+                                            <button onclick="saveCategoriesFromModal()" 
+                                                    style="padding: 10px 20px; border: none; background: #4CAF50; color: white; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                                                Save Categories
+                                            </button>
+                                        </div>
+                                    `;
+                                    
+                                    modal.appendChild(modalContent);
+                                    document.body.appendChild(modal);
+                                    modal.id = 'categoryModal';
+                                    
+                                    renderModalTree();
+                                    
+                                    modal.addEventListener('click', (e) => {
+                                        if (e.target === modal) {
+                                            modal.remove();
+                                        }
+                                    });
+                                }
+
+                                function renderModalTree() {
+                                    const container = document.getElementById('modalCategoryTree');
+                                    if (!container) return;
+                                    
+                                    container.innerHTML = renderModalNodes(officialCategories);
+                                }
+
+                                function renderModalNodes(nodes, level = 0) {
+                                    let html = '';
+                                    
+                                    nodes.forEach(node => {
+                                        const hasChildren = node.children && node.children.length > 0;
+                                        const isExpanded = expandedNodes.has(node.path);
+                                        const isLeaf = !hasChildren;
+                                        const isSelected = selectedPaths.has(node.path);
+                                        const indent = level * 20;
+                                        
+                                        html += `
+                                            <div style="margin-left: ${indent}px; margin-bottom: 6px;">
+                                                <div style="display: flex; align-items: center; padding: 10px; background: white; border-radius: 6px; border-left: 3px solid ${node.color};">
+                                                    ${hasChildren ? `
+                                                        <span style="cursor: pointer; margin-right: 8px; user-select: none; color: #666;" onclick="toggleModalNode('${node.path}')">
+                                                            ${isExpanded ? '▼' : '▶'}
+                                                        </span>
+                                                    ` : '<span style="width: 18px; display: inline-block; text-align: center; margin-right: 8px; color: #ccc;">•</span>'}
+                                                    
+                                                    ${isLeaf ? `
+                                                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1;">
+                                                            <input type="checkbox" 
+                                                                class="category-selector"
+                                                                value="${node.path}"
+                                                                ${isSelected ? 'checked' : ''}
+                                                                onchange="updateModalSelection('${node.path}', this.checked)">
+                                                            <span style="color: ${node.color}; font-weight: 500;">${node.name}</span>
+                                                            <span style="color: #999; font-size: 0.85em; margin-left: auto;">${node.path}</span>
+                                                        </label>
+                                                    ` : `
+                                                        <span style="color: ${node.color}; font-weight: 600; font-size: 1.05em;">${node.name}</span>
+                                                    `}
+                                                </div>
+                                                
+                                                ${hasChildren && isExpanded ? `
+                                                    <div style="margin-top: 6px;">
+                                                        ${renderModalNodes(node.children, level + 1)}
+                                                    </div>
+                                                ` : ''}
+                                            </div>
+                                        `;
+                                    });
+                                    
+                                    return html;
+                                }
+
+                                function toggleModalNode(path) {
+                                    if (expandedNodes.has(path)) {
+                                        expandedNodes.delete(path);
+                                    } else {
+                                        expandedNodes.add(path);
+                                    }
+                                    renderModalTree();
+                                }
+
+                                function updateModalSelection(path, checked) {
+                                    if (checked) {
+                                        selectedPaths.add(path);
+                                    } else {
+                                        selectedPaths.delete(path);
+                                    }
+                                }
+
+                                function closeCategoryModal() {
+                                    document.getElementById('categoryModal')?.remove();
+                                }
+
+                                async function saveCategoriesFromModal() {
+                                    const categories = Array.from(selectedPaths);
+                                    
+                                    await updateCategories(categories);
+                                    closeCategoryModal();
+                                }
+
+                                async function updateCategories(categories) {
+                                    try {
+                                        const response = await fetch('/updateOfficialCategories', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                miiId: '<%= mii.id %>',
+                                                categories: categories
+                                            })
+                                        });
+                                        
+                                        const data = await response.json();
+                                        
+                                        if (data.okay) {
+                                            alert('Categories updated successfully!');
+                                            window.location.reload();
+                                        } else {
+                                            alert('Error: ' + (data.error || 'Failed to update categories'));
+                                        }
+                                    } catch (error) {
+                                        console.error('Error:', error);
+                                        alert('Error updating categories');
+                                    }
+                                }
+                                </script>
+
+                                <style>
+                                    .official-categories-section {
+                                        grid-column: 1 / -1;
+                                        padding: 15px;
+                                        background: #f0f8ff;
+                                        border-radius: 8px;
+                                        border: 2px solid #bbdefb;
+                                    }
+
+                                    .categories-display {
+                                        display: flex;
+                                        flex-wrap: wrap;
+                                        gap: 8px;
+                                        margin: 10px 0;
+                                    }
+
+                                    .category-badge {
+                                        display: inline-block;
+                                        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+                                        color: #0066cc;
+                                        padding: 6px 12px;
+                                        border-radius: 12px;
+                                        font-size: 0.9em;
+                                        font-weight: 500;
+                                        border: 1px solid #90caf9;
+                                    }
+
+                                    .no-categories {
+                                        color: #999;
+                                        font-style: italic;
+                                    }
+
+                                    .edit-categories-btn,
+                                    .manage-cats-btn {
+                                        background: #0066cc;
+                                        color: white;
+                                        border: none;
+                                        padding: 8px 16px;
+                                        border-radius: 6px;
+                                        cursor: pointer;
+                                        font-weight: bold;
+                                        margin-top: 10px;
+                                        margin-right: 10px;
+                                        transition: background 0.3s;
+                                        text-decoration: none;
+                                        display: inline-block;
+                                    }
+
+                                    .edit-categories-btn:hover,
+                                    .manage-cats-btn:hover {
+                                        background: #0052a3;
+                                    }
+
+                                    .manage-cats-btn {
+                                        background: #2196F3;
+                                    }
+
+                                    .manage-cats-btn:hover {
+                                        background: #0b7dda;
+                                    }
+
+                                    #categoryModal .category-selector {
+                                        cursor: pointer;
+                                        width: 18px;
+                                        height: 18px;
+                                    }
+                                    </style>
+                                    <% } %>
                         </div>
                     </div>
+                    <% if(isPrivate) { %>
+                        <div style="background: #fff3cd; border: 2px solid #ffc107; padding: 15px; margin: 15px; border-radius: 8px; text-align: center;">
+                            <strong>🔒 This is a Private Mii</strong>
+                            <p style="margin: 10px 0;">Only you and moderators can view this Mii.</p>
+                            <% if(mii.blockedFromPublishing) { %>
+                                <div style="background: #ffe6e6; padding: 10px; margin-top: 10px; border-radius: 6px;">
+                                    <strong>🚫 This Mii has been blocked from publishing</strong>
+                                    <% if(mii.blockReason) { %>
+                                        <p><%= mii.blockReason %></p>
+                                    <% } %>
+                                </div>
+                            <% } else { %>
+                                <button onclick="publishThisMii()" style="background: #00cc00; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px;">
+                                    📤 Publish This Mii
+                                </button>
+                            <% } %>
+                        </div>
+                        <% if(isPrivate && users[thisUser] && users[thisUser].roles && users[thisUser].roles.includes('moderator')) { %>
+                            <div style="background: #fff3cd; border: 2px solid #ff6600; padding: 15px; margin: 15px; border-radius: 8px;">
+                                <strong>🛡️ Moderator Actions</strong>
+                                <% if(!mii.blockedFromPublishing) { %>
+                                    <button onclick="blockFromPublishing()" style="background: #ff6600; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px;">
+                                        🚫 Block from Publishing
+                                    </button>
+                                <% } else { %>
+                                    <p style="margin: 10px 0;">This Mii is already blocked from publishing.</p>
+                                <% } %>
+                            </div>
+                        <% } %>
+                    <% } %>
                 </div>
 
                 <!-- Uploader Information -->
@@ -116,7 +403,7 @@
                     <% } else{%>
                     <div class="uploader-info">
                         <span class="label">Uploaded by</span>
-                        <a href="/user/<%= mii.uploader %>"><%= mii.uploader %></a>
+                        <a href="/user?user=<%= mii.uploader %>"><%= mii.uploader %></a>
                         <span class="date">on <%= new Date(mii.uploadedOn).toLocaleDateString() %></span>
                     </div>
                     <% } %>

@@ -28,7 +28,7 @@
                     <div id="private-miis-grid">
                         <% for(var i=0; i<privateMiis.length; i++){ %>
                             <div class="private-mii-card" data-mii-id="<%= privateMiis[i].id %>">
-                                <a href="<%= '/mii/'+privateMiis[i].id %>">
+                                <a href="<%= '/mii?id='+privateMiis[i].id %>">
                                     <img src="privateMiiImgs/<%= privateMiis[i].id %>.jpg" 
                                          onerror="this.src='privateMiiImgs/<%= privateMiis[i].id %>.png'"
                                          alt="<%= privateMiis[i].meta?.name || privateMiis[i].name %>">
