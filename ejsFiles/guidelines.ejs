@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <%
+        const pageTitle = 'Community Guidelines - InfiniMii';
+        const pageDesc = `Community Guidelines for content on InfiniMii`;
+        const canonicalUrl = baseUrl + '/tos';
+        const keywords = 'terms of service, tos, privacy policy, guidelines, rules, limitations, community';
+        %>
+        <%- partials.metaTags %>
+        <%- partials.structuredData %>
+        <%- partials.faqSchema %>
+        
+        <link rel="stylesheet" href="/global.css">
+        <link rel="stylesheet" href="/utilityPages.css">
+    </head>
+    <body>
+        <%- partials.header %>
+        <%- partials.accountDisplay %>
+        <main class="content" role="main">
+            <%- partials.sidebar %>
+            
+            <div class="guide-container">
+                <h2>Community Guidelines</h2>
+                <article>
+                    <h2>Final Say</h2>
+                    <p>In all cases, Kestron Programming moderators and administrators have the final say, no questions asked. The Kestron Programming team reserves the right to edit, add to, or remove any and all aspects of all content and submitted content on the website.</p>
+                </article>
+                <article>
+                    <h2>Images</h2>
+                    <p>All Miis submitted generate images to represent the faces behind them. You are not allowed to upload any Mii that will generate a face designed to appear as anything that can be considered inappropriate or controversial.</p>
+                </article>
+                <article>
+                    <h2>Language Restrictions</h2>
+                    <p>All text content submitted should be clear of foul language. Kestron Programming's moderator and administrator team have a more stringent set of language we consider to be clean, and this is non-negotiable. <b>ALL</b> language able to be considered inappropriate, unclean, or "NSFW", is unwelcome. All language used should be respectful to everyone, and in no way aggresive or passive aggressive.</p>
+                </article>
+                <article>
+                    <h2>Political, Celebrity, and Historical Content</h2>
+                    <p>Political figures, Celebrities, and Historical figures may be submitted to the website, but may not contain anything other than being fully respectful to the person they represent. Descriptions must be stated matter of fact to who they were, with no bias or opinions represented. Descriptions should be void of any praise or insult. InfiniMii makes no discrimination of figures of any side of any line. They could be the most evil person in the world, they could be the most benevolent. You must be respectful to any figures represented here, and if you feel they are undeserving of it, do not upload them. Do not take personal offense of any figure represented on the website and expect them to be removed. This is a website of faces, not a political or social commentary.</p>
+                </article>
+                <article>
+                    <h2>Privacy & Personal Information</h2>
+                    <p>Do not upload content that reveals private or personally identifiable information (PII) about private individuals without consent, or that could reasonably be used to locate, contact, or harm them.</p>
+                </article>
+                <article>
+                    <h2>Original Content</h2>
+                    <p>All content published to InfiniMii should be your own, original content, and should not be copied from anywhere, or anyone, else. The only exception to this are those given permission to upload Official Miis, which you can apply for in the Kestron Programming Discord server, or by emailing the team.</p>
+                </article>
+                <article>
+                    <h2>Spam & Manipulation</h2>
+                    <p>No mass or repetitive postings, artificial traffic inflation, vote manipulation, ragebait, or other behavior that degrades discussion or discovery.</p>
+                </article>
+                <article>
+                    <h2>Impersonation and Parody</h2>
+                    <p>Do not mislead others by pretending to be another person or entity. Parody or fan-created representations must be clearly presented as such and must not misrepresent affiliation.</p>
+                </article>
+                <article>
+                <h2>Age & Eligibility</h2>
+                    <p>
+                        InfiniMii does not collect personal information or use tracking cookies. The service is designed to be as safe as possible for general audiences, but parents and guardians are encouraged to supervise younger users. We do not knowingly collect any personal data from anyone, including children. Limited, non-reversible technical data may be used only to enforce bans and protect the service from abuse.
+                    </p>
+                </article>
+            </div>
+
+            <%- partials.featuredMiis %>
+        </main>
+        <%- partials.footer %>
+        <script src="global.js"></script>
+    </body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <%
+        const pageTitle = ' - InfiniMii';
+        const pageDesc = `Miis are awesome, Miis are cool. They're never nasty or mean. I'd make a website, for all the lost Miis, if ever one day I were a coder!`;
+        const canonicalUrl = baseUrl + '/RESTOFTHEURL';
+        const keywords = 'miis, miis, miis, miis, miis, miis';
+        %>
+        <%- partials.metaTags %>
+        <%- partials.structuredData %>
+        <%- partials.faqSchema %>
+        
+        <link rel="stylesheet" href="/global.css">
+        <link rel="stylesheet" href="/utilityPages.css">
+    </head>
+    <body>
+        <%- partials.header %>
+        <%- partials.accountDisplay %>
+        <main class="content" role="main">
+            <%- partials.sidebar %>
+            
+            <div class="guide-container">
+                <article>
+                    <h2>Privacy Policy</h2>
+                    <p>InfiniMii will not store any data on you that is not absolutely required for site functionality. This includes, but is not limited to, things such as cookies to keep you logged in, or settings you would like us to remember. We will never sell your data, and should you delete your account, all of your data will be forgotten forever. The one exception to this is if you are banned, in which case we may store a small and encrypted amount of identifying data for the purposes of blocking you from ever making a new account.</p>
+                </article>
+            </div>
+
+            <%- partials.featuredMiis %>
+        </main>
+        <%- partials.footer %>
+        <script src="global.js"></script>
+    </body>
+</html>

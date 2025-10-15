@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <%
+        const pageTitle = 'Terms of Service - InfiniMii';
+        const pageDesc = `Terms of Service for using InfiniMii`;
+        const canonicalUrl = baseUrl + '/tos';
+        const keywords = 'terms of service, tos, privacy policy';
+        %>
+        <%- partials.metaTags %>
+        <%- partials.structuredData %>
+        <%- partials.faqSchema %>
+        
+        <link rel="stylesheet" href="/global.css">
+        <link rel="stylesheet" href="/utilityPages.css">
+        <style>
+            li{
+                list-style-type:disc;
+            }
+        </style>
+    </head>
+    <body>
+        <%- partials.header %>
+        <%- partials.accountDisplay %>
+        <main class="content" role="main">
+            <%- partials.sidebar %>
+            
+            <div class="guide-container">
+                <h2>Terms of Service</h2>
+                <article>
+                    <h2>Introduction</h2>
+                    <p>InfiniMii is a website designed to provide an interface for working with Nintendo's Mii characters in as many capacities as possible. It is not necessary to modify your console or system in any way to interact with InfiniMii to the fullest, but it is designed to fully interface with and be an extension of and enhancement of these consoles, and in no way a replacement for them.</p>
+                </article>
+                <article>
+                    <h2>Open Source</h2>
+                    <p>
+                        InfiniMii and the primary library that powers it, MiiJS, are fully and completely open source. We provide these resources, and the code that makes these resources, to be used freely and openly, and to modify in any way.<br>
+                        However, you may not claim to represent InfiniMii or MiiJS in any way, unless a designated developer, moderator, or administrator by Kestron Programming.
+                    </p>
+                </article>
+                <article>
+                    <h2>Your Responsibilities</h2>
+                    <p>
+                        Your use of this website indicates an agreement to the following. You will not engage in any behaviour that intentionally or unintentionally damages, causes loss, or expense to any user of the website. This can include, but is not limited to, hacking, exploiting, or using Kestron Programming tools or services as a platform or resource in any form of scam. Any exploits found must be done in a way that does not inhibit usage or enjoyment of the services to any other user, and must be reported to the Kestron Programming team immediately. You may not engage in behaviour counter to the Community Guidelines, which can be summed up in, but is not limited to, the following. You must be respectful and clean of language and imagery at all times. Kestron Programming's moderators and administrators have the final say in all instances, and may terminate your usage of the website at any time at our own discretion.
+                    </p>
+                </article>
+                <article>
+                    <h2>Various Disclaimers</h2>
+                    <p>
+                        <ul>
+                            <li>This website and its content are provided 'as is' without warranty of any kind. Use at your own risk.</li>
+                            <li>Kestron Programming, InfiniMii, and MiiJS have no association whatsoever with Nintendo. Nintendo owns all trademarks and copyrights to Mii characters, the DS, Wii, 3DS, Wii U, Amiibo, Switch, Switch 2, Tomodachi Life, Miitomo, and any other Nintendo properties mentioned in the course of this project. This is a fan project made to enhance your experience with these games, consoles, and systems. It is in no way a replacement or alternative to anything within.</li>
+                            <li>Kestron Programming, InfiniMii, and MiiJS are not liable for any damages incurred as a result of using these services or anything having any relation to them.</li>
+                        </ul>
+                    </p>
+                </article>
+                <article>
+                    <h2>Privacy</h2>
+                    <p>
+                        InfiniMii does not store any user data past that which is essential for site usage and safety of users on the site. We do not sell this data ever, and it can be deleted at any time by deleting your account. The only exception to this is if you have been banned, in which case a small amount of encrypted and obfuscated identifying data will be retained indefinitely as a means to prevent further abuse of InfiniMii services.
+                    </p>
+                </article>
+            </div>
+
+            <%- partials.featuredMiis %>
+        </main>
+        <%- partials.footer %>
+        <script src="global.js"></script>
+    </body>
+</html>

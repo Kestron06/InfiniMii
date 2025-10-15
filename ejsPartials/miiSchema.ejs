@@ -1,0 +1,54 @@
+<% if (typeof mii !== 'undefined') { %>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CreativeWork",
+  "name": "<%= mii.meta.name %>",
+  "description": "<%= mii.desc || `${mii.meta.name} - Mii character for Nintendo systems` %>",
+  "image": [
+    "<%= baseUrl %>/miiImgs/<%= mii.id %>.jpg",
+    "<%= baseUrl %>/miiQRs/<%= mii.id %>.jpg"
+  ],
+  "creator": {
+    "@type": "<%= mii.official ? 'Organization' : 'Person' %>",
+    "name": "<%= mii.uploader %>"
+  },
+  "datePublished": "<%= new Date(mii.uploadedOn).toISOString() %>",
+  "url": "<%= baseUrl %>/mii/<%= mii.id %>",
+  "keywords": "mii character, <%= mii.meta.name %>, nintendo mii, <%= mii.official ? 'official mii' : 'custom mii' %>",
+  "thumbnailUrl": "<%= baseUrl %>/miiImgs/<%= mii.id %>.jpg",
+  "interactionStatistic": {
+    "@type": "InteractionCounter",
+    "interactionType": "https://schema.org/LikeAction",
+    "userInteractionCount": <%= mii.votes || 0 %>
+  }
+}
+</script>
+
+<% if (mii.official) { %>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "<%= mii.meta.name %> Official Mii",
+  "image": "<%= baseUrl %>/miiImgs/<%= mii.id %>.jpg",
+  "description": "<%= mii.desc || `Official ${mii.meta.name} Mii character from Nintendo` %>",
+  "brand": {
+    "@type": "Organization",
+    "name": "Nintendo"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "<%= Math.min(5, Math.max(1, (mii.votes || 1) / 10)) %>",
+    "reviewCount": "<%= mii.votes || 1 %>"
+  }
+}
+</script>
+<% } %>
+<% } %>

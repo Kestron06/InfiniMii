@@ -1,24 +1,47 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Search - InfiniMii</title>
+        <%
+        const pageTitle = 'Search Mii Characters - InfiniMii';
+        const pageDesc = 'Search our vast collection of Mii characters for all Nintendo systems. Find official Nintendo Miis, community creations, and celebrity Miis for Wii, 3DS, Wii U, and Switch.';
+        const canonicalUrl = baseUrl + '/search';
+        const keywords = 'search mii, find mii character, mii database, mii search engine';
+        %>
+        <%- partials.metaTags %>
+        <%- partials.structuredData %>
+        <%- partials.faqSchema %>
+        
         <link rel="stylesheet" href="./global.css">
-        </link>
         <link rel="stylesheet" href="utilityPages.css">
     </head>
     <body>
         <%- partials.header %>
         <%- partials.accountDisplay %>
-        <div class="content">
+        <main class="content" role="main">
             <%- partials.sidebar %>
-            <form method="GET" action="/searchResults">
-                <fieldset>
-                    <legend>Search</legend>
-                    <input name="q" placeholder="Query..." type="text"> <input type="submit">
-                </fieldset>
-            </form>
+            <section class="utility-container" aria-labelledby="search-heading">
+                <form method="GET" action="/searchResults" role="search">
+                    <fieldset>
+                        <legend id="search-heading">Search Mii Characters</legend>
+                        <label for="search-query" class="sr-only">Enter character name or keywords</label>
+                        <input name="q" autocomplete="off" required aria-required="true" placeholder="Search by character name, creator, or description..." type="search" id="search-query">
+                        <input type="submit" value="Search">
+
+                        <!-- This is here for SEO/LLM-O -->
+                        <div class="search-tips" hidden>
+                        <h3>Search Tips:</h3>
+                        <ul>
+                            <li>Search by character name (e.g., "Mario", "Link", "Pikachu")</li>
+                            <li>Find official Nintendo Miis by searching for game titles</li>
+                            <li>Use creator names to find all Miis by a specific user</li>
+                            <li>Browse by console: "Wii", "3DS", "Switch"</li>
+                        </ul>
+                    </div>
+                    </fieldset>
+                </form>
+            </section>
             <%- partials.featuredMiis %>
-        </div>
+        </main>
         <%- partials.footer %>
         <script src="global.js"></script>
     </body>

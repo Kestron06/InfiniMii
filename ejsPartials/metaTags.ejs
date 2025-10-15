@@ -1,0 +1,47 @@
+<%
+// Default values - make everything optional with fallbacks
+const pageTitle = typeof title !== 'undefined' ? title : 'InfiniMii';
+const pageDesc = typeof description !== 'undefined' ? description : 'Create, convert, and share Mii characters';
+const pageUrl = typeof canonicalUrl !== 'undefined' ? canonicalUrl : baseUrl + '/';
+const pageImage = typeof ogImage !== 'undefined' ? ogImage : baseUrl + '/og-image.jpg';
+const pageType = typeof ogType !== 'undefined' ? ogType : 'website';
+const siteName = 'InfiniMii';
+const pageKeywords = typeof keywords !== 'undefined' ? keywords : 'mii, mii characters, nintendo';
+%>
+
+<!-- Primary Meta Tags -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><%= pageTitle %></title>
+<meta name="description" content="<%= pageDesc %>">
+<meta name="keywords" content="<%= pageKeywords %>">
+<meta name="author" content="InfiniMii">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+
+<!-- Canonical URL -->
+<link rel="canonical" href="<%= pageUrl %>">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="<%= pageType %>">
+<meta property="og:url" content="<%= pageUrl %>">
+<meta property="og:title" content="<%= pageTitle %>">
+<meta property="og:description" content="<%= pageDesc %>">
+<meta property="og:image" content="<%= pageImage %>">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="<%= pageTitle %>">
+<meta property="og:site_name" content="<%= siteName %>">
+<meta property="og:locale" content="en_US">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:url" content="<%= pageUrl %>">
+<meta name="twitter:title" content="<%= pageTitle %>">
+<meta name="twitter:description" content="<%= pageDesc %>">
+<meta name="twitter:image" content="<%= pageImage %>">
+<meta name="twitter:image:alt" content="<%= pageTitle %>">
+
+<!-- Additional SEO Tags -->
+<meta name="theme-color" content="#ff0000">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">

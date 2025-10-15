@@ -1,5 +1,4 @@
 const miijs = require("miijs");
-const fetch = require("@replit/node-fetch");
 const crypto = require('crypto');
 const fs = require("fs");
 const ejs = require('ejs');
@@ -8,30 +7,43 @@ const path = require("path");
 const storage = require("./storage.json");
 const nodemailer = require("nodemailer");
 const cookieParser = require('cookie-parser');
+const compression = require('compression');
 var multer = require('multer');
 var upload = multer({ dest: 'uploads/' });
 var globalSalt = process.env.salt;
 process.env=require("./env.json");
 const PRIVATE_MII_LIMIT = process.env.privateMiiLimit;
+const baseUrl=process.env.baseUrl;
 
 var partials={};
 fs.readdirSync("./partials").forEach(file=>{
     if(!file.endsWith(".html")) return;
     partials[file.split(".")[0]]=fs.readFileSync(`./partials/${file}`,"utf-8");
 });
-function getSendables(req){
-    //EJS renders server side, only what we render in the file gets sent, so having storage readily available is much easier and not a problem for security
-    var send=Object.assign(structuredClone(storage),{ thisUser: req.cookies.username||"Default", pfp: storage.users[req.cookies.username||"Default"].miiPfp, query:req.query});
+async function getSendables(req,title){
+    const currentPath = req.path;
+    const queryString = Object.keys(req.query).length > 0 
+        ? '?' + new URLSearchParams(req.query).toString() 
+        : '';
+    var send=Object.assign(structuredClone(storage),{howToTitle:"How To" ,currentPath: currentPath + queryString, thisUser: req.cookies.username||"Default", pfp: storage.users[req.cookies.username||"Default"].miiPfp, query:req.query, discordInvite:process.env.discordInvite, githubLink:process.env.githubLink, baseUrl:baseUrl, title:title});
     send.partials=structuredClone(partials);
-    fs.readdirSync(`./ejsPartials`).forEach(file=>{
-        if(!file.endsWith(".ejs")) return;
-        ejs.renderFile(`./ejsPartials/${file}`, send, {}, function(err, str) {
-            if (err) {
-                return;
-            }
-            send.partials[file.split(".")[0]]=str;
-        });
-    });
+    
+    // Render EJS partials synchronously
+    const ejsFiles = fs.readdirSync(`./ejsPartials`).filter(file => file.endsWith(".ejs"));
+    for (const file of ejsFiles) {
+        try {
+            const str = await new Promise((resolve, reject) => {
+                ejs.renderFile(`./ejsPartials/${file}`, send, {}, function(err, str) {
+                    if (err) reject(err);
+                    else resolve(str);
+                });
+            });
+            send.partials[file.split(".")[0]] = str;
+        } catch (err) {
+            console.error(`Error rendering ${file}:`, err);
+        }
+    }
+    
     return send;
 }
 
@@ -593,6 +605,48 @@ function getAverageMii(){
     storage.miis.average = avg;
 }
 
+// Sitemap generation functions
+function generateSitemapXML(urls) {
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n';
+    xml += '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n';
+    
+    urls.forEach(url => {
+        xml += '  <url>\n';
+        xml += `    <loc>${url.loc}</loc>\n`;
+        if (url.lastmod) xml += `    <lastmod>${url.lastmod}</lastmod>\n`;
+        if (url.changefreq) xml += `    <changefreq>${url.changefreq}</changefreq>\n`;
+        if (url.priority) xml += `    <priority>${url.priority}</priority>\n`;
+        
+        // Add image sitemap data if present
+        if (url.images && url.images.length > 0) {
+            url.images.forEach(img => {
+                xml += '    <image:image>\n';
+                xml += `      <image:loc>${img.loc}</image:loc>\n`;
+                if (img.title) xml += `      <image:title>${escapeXml(img.title)}</image:title>\n`;
+                if (img.caption) xml += `      <image:caption>${escapeXml(img.caption)}</image:caption>\n`;
+                xml += '    </image:image>\n';
+            });
+        }
+        
+        xml += '  </url>\n';
+    });
+    
+    xml += '</urlset>';
+    return xml;
+}
+
+function escapeXml(unsafe) {
+    return unsafe.replace(/[<>&'"]/g, (c) => {
+        switch (c) {
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '&': return '&amp;';
+            case '\'': return '&apos;';
+            case '"': return '&quot;';
+        }
+    });
+}
 
 const site = new express();
 site.use(express.json());
@@ -633,7 +687,7 @@ site.use((req, res, next) => {
     next();
 });
 // Serve private Mii images with authentication
-site.use('/privateMiiImgs', (req, res, next) => {
+site.use('/privateMiiImgs', async (req, res, next) => {
     const miiId = req.path.split('/').pop().split('.')[0];
     
     if (storage.privateMiis && storage.privateMiis[miiId]) {
@@ -651,7 +705,7 @@ site.use('/privateMiiImgs', (req, res, next) => {
         next();
     }
 });
-site.use('/privateMiiQRs', (req, res, next) => {
+site.use('/privateMiiQRs', async (req, res, next) => {
     const miiId = req.path.split('/').pop().split('.')[0];
     
     if (storage.privateMiis && storage.privateMiis[miiId]) {
@@ -668,6 +722,49 @@ site.use('/privateMiiQRs', (req, res, next) => {
     } else {
         next();
     }
+});
+// Image optimization headers
+site.use('/miiImgs', (req, res, next) => {
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    next();
+});
+site.use('/miiQRs', (req, res, next) => {
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    next();
+});
+// Static assets caching
+site.use('/static', express.static(path.join(__dirname, 'static'), {
+    maxAge: '7d',
+    etag: true
+}));
+site.use(compression({
+    level: 6,
+    threshold: 100 * 1024, // Only compress if response > 100kb
+    filter: (req, res) => {
+        if (req.headers['x-no-compression']) {
+            return false;
+        }
+        return compression.filter(req, res);
+    }
+}));
+site.use((req, res, next) => {
+    // Security headers
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    
+    // Content Security Policy (adjust as needed)
+    res.setHeader('Content-Security-Policy', 
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; " +
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+        "font-src 'self' https://fonts.gstatic.com; " +
+        "img-src 'self' data: https:; " +
+        "connect-src 'self' https://www.google-analytics.com;"
+    );
+    
+    next();
 });
 
 site.listen(8080, async () => {
@@ -963,9 +1060,8 @@ console.log("Official categories initialized with nested structure");
     console.log(`All setup finished.\nOnline`);
 });
 
-//The following up to and including /recent are all sorted before being renders in miis.ejs, meaning the file is recycled. / is currently just a clone of /top. /official and /search is more of the same but with a slight change to make Highlighted Mii still work without the full Mii array
-site.get('/', (req, res) => {
-    let toSend = getSendables(req);
+site.get('/', async (req, res) => {
+    let toSend = await getSendables(req, "InfiniMii");
     toSend.title = "InfiniMii";
     toSend.miiCategories={
         "Random":{miis:api("random",5),link:"./random"},
@@ -974,7 +1070,7 @@ site.get('/', (req, res) => {
         "Recent":{miis:api("recent",5),link:"./recent"},
         "Official":{miis:api("official",5),link:"./official"}
     };
-    ejs.renderFile('./ejsFiles/index.ejs', toSend, {}, function(err, str) {
+    ejs.renderFile(toSend.thisUser.toLowerCase()==="default"?'./ejsFiles/about.ejs':'./ejsFiles/index.ejs', toSend, {}, function(err, str) {
         if (err) {
             res.send(err);
             console.log(err);
@@ -983,8 +1079,9 @@ site.get('/', (req, res) => {
         res.send(str);
     });
 });
-site.get('/random', (req, res) => {
-    let toSend = getSendables(req);
+//The following up to and including /recent are all sorted before being renders in miis.ejs, meaning the file is recycled. / is currently just a clone of /top. /official and /search is more of the same but with a slight change to make Highlighted Mii still work without the full Mii array
+site.get('/random', async (req, res) => {
+    let toSend = await getSendables(req);
     toSend.displayedMiis = api("random",30);
     toSend.title = "Random Miis - InfiniMii";
     ejs.renderFile('./ejsFiles/miis.ejs', toSend, {}, function(err, str) {
@@ -996,8 +1093,8 @@ site.get('/random', (req, res) => {
         res.send(str)
     });
 });
-site.get('/top', (req, res) => {
-    let toSend = getSendables(req);
+site.get('/top', async (req, res) => {
+    let toSend = await getSendables(req);
     toSend.displayedMiis = api("top",30);
     toSend.title = "Top Miis - InfiniMii";
     ejs.renderFile('./ejsFiles/miis.ejs', toSend, {}, function(err, str) {
@@ -1009,8 +1106,8 @@ site.get('/top', (req, res) => {
         res.send(str)
     });
 });
-site.get('/best', (req, res) => {
-    let toSend = getSendables(req);
+site.get('/best', async (req, res) => {
+    let toSend = await getSendables(req);
     toSend.displayedMiis = api("best",30);
     toSend.title = "All-Time Top Miis - InfiniMii";
     ejs.renderFile('./ejsFiles/miis.ejs', toSend, {}, function(err, str) {
@@ -1022,8 +1119,8 @@ site.get('/best', (req, res) => {
         res.send(str)
     });
 });
-site.get('/recent', (req, res) => {
-    let toSend = getSendables(req);
+site.get('/recent', async (req, res) => {
+    let toSend = await getSendables(req);
     toSend.displayedMiis = api("recent",30);
     toSend.title = "Recent Miis - InfiniMii";
     ejs.renderFile('./ejsFiles/miis.ejs', toSend, {}, function(err, str) {
@@ -1035,8 +1132,8 @@ site.get('/recent', (req, res) => {
         res.send(str)
     });
 });
-site.get('/official', (req, res) => {
-    let toSend = getSendables(req);
+site.get('/official', async (req, res) => {
+    let toSend = await getSendables(req);
     
     // Get all official Miis
     let officialMiis = Object.values(storage.miis).filter(mii => mii.official);
@@ -1081,8 +1178,8 @@ site.get('/official', (req, res) => {
         res.send(str);
     });
 });
-site.get('/searchResults', (req, res) => {
-    let toSend = getSendables(req)
+site.get('/searchResults', async (req, res) => {
+    let toSend = await getSendables(req)
     toSend.displayedMiis = api("search",30,0,req.query.q);
     toSend.title = "Search '" + req.query.q + "' - InfiniMii";
     ejs.renderFile('./ejsFiles/miis.ejs', toSend, {}, function(err, str) {
@@ -1094,8 +1191,8 @@ site.get('/searchResults', (req, res) => {
         res.send(str)
     });
 });
-site.get('/search', (req, res) => {
-    ejs.renderFile('./ejsFiles/search.ejs', getSendables(req), {}, function(err, str) {
+site.get('/search', async (req, res) => {
+    ejs.renderFile('./ejsFiles/search.ejs', await getSendables(req), {}, function(err, str) {
         if (err) {
             res.send(err);
             console.log(err);
@@ -1104,8 +1201,8 @@ site.get('/search', (req, res) => {
         res.send(str)
     });
 });
-site.get('/transferInstructions', (req, res) => {
-    ejs.renderFile('./ejsFiles/transferInstructions.ejs', getSendables(req), {}, function(err, str) {
+site.get('/transferInstructions', async (req, res) => {
+    ejs.renderFile('./ejsFiles/transferInstructions.ejs', await getSendables(req), {}, function(err, str) {
         if (err) {
             res.send(err);
             console.log(err);
@@ -1114,8 +1211,8 @@ site.get('/transferInstructions', (req, res) => {
         res.send(str)
     });
 });
-site.get('/upload', (req, res) => {
-    ejs.renderFile('./ejsFiles/upload.ejs', getSendables(req), {}, function(err, str) {
+site.get('/upload', async (req, res) => {
+    ejs.renderFile('./ejsFiles/upload.ejs', await getSendables(req), {}, function(err, str) {
         if (err) {
             res.send(err);
             console.log(err);
@@ -1124,7 +1221,7 @@ site.get('/upload', (req, res) => {
         res.send(str)
     });
 });
-site.get('/api', (req, res) => {
+site.get('/api', async (req, res) => {
     try{
         res.send(api(req.query.type,req.query.arg));
     }
@@ -1154,7 +1251,7 @@ site.get('/verify', async (req, res) => {
         console.log(e);
     }
 });
-site.get('/deleteMii', (req, res) => {
+site.get('/deleteMii', async (req, res) => {
     try {
         if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
             res.send("{'okay':false}");
@@ -1185,7 +1282,7 @@ site.get('/deleteMii', (req, res) => {
                             },
                             {
                                 "name": `${mii.official ? "Uploaded" : "Made"} by`,
-                                "value": `[${mii.uploader}](https://miis.kestron.com/user?user=${mii.uploader})`,
+                                "value": `[${mii.uploader}](https://miis.kestron.com/user/${mii.uploader})`,
                                 "inline": true
                             },
                             {
@@ -1242,7 +1339,7 @@ site.get('/deleteMii', (req, res) => {
                             },
                             {
                                 "name": `Uploaded by`,
-                                "value": `[${mii.uploader}](https://miis.kestron.com/user?user=${mii.uploader})`,
+                                "value": `[${mii.uploader}](https://miis.kestron.com/user/${mii.uploader})`,
                                 "inline": true
                             }
                         ],
@@ -1354,7 +1451,7 @@ site.post('/updateMiiField', async (req, res) => {
                 fields: [
                     {
                         name: 'Mii',
-                        value: `[${mii.meta.name}](https://miis.kestron.com/mii?id=${id})`,
+                        value: `[${mii.meta.name}](https://miis.kestron.com/mii/${id})`,
                         inline: true
                     },
                     {
@@ -1421,7 +1518,7 @@ site.get('/regenerateQR', async (req, res) => {
                 fields: [
                     {
                         name: 'Mii',
-                        value: `[${mii.meta.name}](https://miis.kestron.com/mii?id=${id})`,
+                        value: `[${mii.meta.name}](https://miis.kestron.com/mii/${id})`,
                         inline: true
                     }
                 ],
@@ -1924,7 +2021,7 @@ site.post('/toggleMiiOfficial', async (req, res) => {
                 fields: [
                     {
                         name: 'Mii',
-                        value: `[${mii.meta.name}](https://miis.kestron.com/mii?id=${id})`,
+                        value: `[${mii.meta.name}](https://miis.kestron.com/mii/${id})`,
                         inline: true
                     },
                     {
@@ -1950,11 +2047,152 @@ site.post('/toggleMiiOfficial', async (req, res) => {
         res.json({ okay: false, error: 'Server error' });
     }
 });
+
+// Main sitemap endpoint
+site.get('/sitemap.xml', async (req, res) => {
+    const baseUrl = 'https://yourdomain.com'; // Replace with your actual domain
+    
+    const urls = [
+        {
+            loc: baseUrl + '/',
+            lastmod: new Date().toISOString().split('T')[0],
+            changefreq: 'daily',
+            priority: '1.0'
+        },
+        {
+            loc: baseUrl + '/random',
+            changefreq: 'always',
+            priority: '0.8'
+        },
+        {
+            loc: baseUrl + '/top',
+            changefreq: 'hourly',
+            priority: '0.9'
+        },
+        {
+            loc: baseUrl + '/best',
+            changefreq: 'daily',
+            priority: '0.9'
+        },
+        {
+            loc: baseUrl + '/recent',
+            changefreq: 'hourly',
+            priority: '0.8'
+        },
+        {
+            loc: baseUrl + '/official',
+            changefreq: 'weekly',
+            priority: '0.9'
+        },
+        {
+            loc: baseUrl + '/search',
+            changefreq: 'monthly',
+            priority: '0.7'
+        },
+        {
+            loc: baseUrl + '/upload',
+            changefreq: 'monthly',
+            priority: '0.6'
+        },
+        {
+            loc: baseUrl + '/convert',
+            changefreq: 'monthly',
+            priority: '0.7'
+        },
+        {
+            loc: baseUrl + '/qr',
+            changefreq: 'monthly',
+            priority: '0.7'
+        }
+    ];
+    
+    res.header('Content-Type', 'application/xml');
+    res.send(generateSitemapXML(urls));
+});
+
+// Mii-specific sitemap (separate for better organization)
+site.get('/sitemap-miis.xml', async (req, res) => {
+    const baseUrl = 'https://yourdomain.com';
+    const urls = [];
+    
+    // Add all published Miis
+    Object.keys(storage.miis).forEach(miiId => {
+        const mii = storage.miis[miiId];
+        const lastmod = mii.uploadedOn ? new Date(mii.uploadedOn).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+        
+        urls.push({
+            loc: `${baseUrl}/mii/${miiId}`,
+            lastmod: lastmod,
+            changefreq: 'weekly',
+            priority: mii.official ? '0.9' : '0.7',
+            images: [
+                {
+                    loc: `${baseUrl}/miiImgs/${miiId}.jpg`,
+                    title: `${mii.meta.name} - Mii Character`,
+                    caption: mii.desc || `${mii.meta.name} Mii character for Nintendo systems`
+                },
+                {
+                    loc: `${baseUrl}/miiQRs/${miiId}.jpg`,
+                    title: `${mii.meta.name} - QR Code`,
+                    caption: `QR Code for ${mii.meta.name} - Scan with 3DS, Wii U, Tomodachi Life, or Miitomo`
+                }
+            ]
+        });
+    });
+    
+    res.header('Content-Type', 'application/xml');
+    res.send(generateSitemapXML(urls));
+});
+
+// User profiles sitemap
+site.get('/sitemap-users.xml', async (req, res) => {
+    const baseUrl = 'https://yourdomain.com';
+    const urls = [];
+    
+    Object.keys(storage.users).forEach(username => {
+        if (username !== 'default' && username !== 'Nintendo') {
+            urls.push({
+                loc: `${baseUrl}/user/${encodeURIComponent(username)}`,
+                changefreq: 'weekly',
+                priority: '0.6'
+            });
+        }
+    });
+    
+    res.header('Content-Type', 'application/xml');
+    res.send(generateSitemapXML(urls));
+});
+
+// Sitemap index
+site.get('/sitemap-index.xml', async (req, res) => {
+    const baseUrl = 'https://yourdomain.com';
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+    
+    const sitemaps = [
+        { loc: `${baseUrl}/sitemap.xml`, lastmod: new Date().toISOString().split('T')[0] },
+        { loc: `${baseUrl}/sitemap-miis.xml`, lastmod: new Date().toISOString().split('T')[0] },
+        { loc: `${baseUrl}/sitemap-users.xml`, lastmod: new Date().toISOString().split('T')[0] }
+    ];
+    
+    sitemaps.forEach(sitemap => {
+        xml += '  <sitemap>\n';
+        xml += `    <loc>${sitemap.loc}</loc>\n`;
+        xml += `    <lastmod>${sitemap.lastmod}</lastmod>\n`;
+        xml += '  </sitemap>\n';
+    });
+    
+    xml += '</sitemapindex>';
+    
+    res.header('Content-Type', 'application/xml');
+    res.send(xml);
+});
+
 // ========== AMIIBO ENDPOINTS ==========
 
 // Amiibo tools page
-site.get('/amiibo', (req, res) => {
-    ejs.renderFile('./ejsFiles/amiibo.ejs', getSendables(req), {}, function(err, str) {
+site.get('/amiibo', async (req, res) => {
+    ejs.renderFile('./ejsFiles/amiibo.ejs', await getSendables(req), {}, function(err, str) {
         if (err) {
             res.send(err);
             console.log(err);
@@ -2179,7 +2417,7 @@ site.post('/uploadStudioMii', async (req, res) => {
             }]
         }));
         
-        setTimeout(() => { res.redirect("/mii?id=" + mii.id) }, 2000);
+        setTimeout(() => { res.redirect("/mii/" + mii.id) }, 2000);
         
     } catch (e) {
         console.error('Error uploading Studio Mii:', e);
@@ -2270,7 +2508,7 @@ site.get('/downloadMii', async (req, res) => {
 });
 
 // Get Studio code for a Mii (for copying)
-site.get('/getStudioCode', (req, res) => {
+site.get('/getStudioCode', async (req, res) => {
     try {
         const miiId = req.query.id;
         
@@ -2354,7 +2592,7 @@ site.post('/changeUserPfp', async (req, res) => {
         res.json({ okay: false, error: 'Server error' });
     }
 });
-site.get('/voteMii', (req, res) => {
+site.get('/voteMii', async (req, res) => {
     if (!req.query.id) {
         res.send("{'error':'No ID specified'}");
         return;
@@ -2385,9 +2623,9 @@ site.get('/voteMii', (req, res) => {
     }
     save();
 });
-site.get('/mii', (req, res) => {
-    let inp = getSendables(req);
-    const miiId = req.query.id;
+site.get('/mii/:id', async (req, res) => {
+    let inp = await getSendables(req);
+    const miiId = req.params.id;
     
     // Check if it's a published Mii
     if (storage.miis[miiId]) {
@@ -2425,16 +2663,20 @@ site.get('/mii', (req, res) => {
         res.send(str);
     });
 });
-site.get('/user', (req, res) => {
-    if (req.query.user === "Nintendo") {
+site.get('/user/:username', async (req, res) => {
+    const username = decodeURIComponent(req.params.username);
+    if (!storage.users[username]) {
+        return res.status(404).send('User not found');
+    }
+    if (username === "Nintendo") {
         res.redirect('/official');
         return;
     }
-    let inp = getSendables(req);
-    inp.user = storage.users[req.query.user];
-    inp.user.name = req.query.user;
+    let inp = await getSendables(req);
+    inp.user = storage.users[username];
+    inp.user.name = username;
     inp.displayedMiis = [];
-    storage.users[req.query.user].submissions.forEach(mii => {
+    storage.users[username].submissions.forEach(mii => {
         inp.displayedMiis.push(storage.miis[mii]);
     });
     ejs.renderFile('./ejsFiles/userPage.ejs', inp, {}, function(err, str) {
@@ -2446,10 +2688,50 @@ site.get('/user', (req, res) => {
         res.send(str)
     });
 });
-site.get('/signup', (req, res) => {
+site.get('/about', async (req, res) => {
+    ejs.renderFile('./ejsFiles/about.ejs', await getSendables(req), {}, function(err, str) {
+        if (err) {
+            res.send(err);
+            console.log(err);
+            return;
+        }
+        res.send(str);
+    });
+});
+site.get('/privacy', async (req, res) => {
+    ejs.renderFile('./ejsFiles/privacy.ejs', await getSendables(req), {}, function(err, str) {
+        if (err) {
+            res.send(err);
+            console.log(err);
+            return;
+        }
+        res.send(str);
+    });
+});
+site.get('/tos', async (req, res) => {
+    ejs.renderFile('./ejsFiles/tos.ejs', await getSendables(req), {}, function(err, str) {
+        if (err) {
+            res.send(err);
+            console.log(err);
+            return;
+        }
+        res.send(str);
+    });
+});
+site.get('/guidelines', async (req, res) => {
+    ejs.renderFile('./ejsFiles/guidelines.ejs', await getSendables(req), {}, function(err, str) {
+        if (err) {
+            res.send(err);
+            console.log(err);
+            return;
+        }
+        res.send(str);
+    });
+});
+site.get('/signup', async (req, res) => {
     res.sendFile(path.join(__dirname, "./static/signup.html"));
 });
-site.get('/login', (req, res) => {
+site.get('/login', async (req, res) => {
     res.sendFile(path.join(__dirname, "./static/login.html"));
 });
 site.get('/logout', async (req, res) => {
@@ -2468,8 +2750,8 @@ site.get('/logout', async (req, res) => {
     }
     save();
 });
-site.get('/convert', (req, res) => {
-    ejs.renderFile('./ejsFiles/convert.ejs', getSendables(req), {}, function(err, str) {
+site.get('/convert', async (req, res) => {
+    ejs.renderFile('./ejsFiles/convert.ejs', await getSendables(req), {}, function(err, str) {
         if (err) {
             res.send(err);
             console.log(err);
@@ -2478,8 +2760,8 @@ site.get('/convert', (req, res) => {
         res.send(str)
     });
 });
-site.get('/qr', (req, res) => {
-    ejs.renderFile('./ejsFiles/qr.ejs', getSendables(req), {}, function(err, str) {
+site.get('/qr', async (req, res) => {
+    ejs.renderFile('./ejsFiles/qr.ejs', await getSendables(req), {}, function(err, str) {
         if (err) {
             res.send(err);
             console.log(err);
@@ -2488,12 +2770,12 @@ site.get('/qr', (req, res) => {
         res.send(str)
     });
 });
-site.get('/settings', (req, res) => {
+site.get('/settings', async (req, res) => {
     if (!req.cookies.username) {
         res.redirect("/");
         return;
     }
-    var toSend=getSendables(req);
+    var toSend= await getSendables(req);
     ejs.renderFile('./ejsFiles/settings.ejs', toSend, {}, function(err, str) {
         if (err) {
             res.send(err);
@@ -2503,7 +2785,7 @@ site.get('/settings', (req, res) => {
         res.send(str)
     });
 });
-site.get('/myPrivateMiis', (req, res) => {
+site.get('/myPrivateMiis', async (req, res) => {
     if (!req.cookies.username) {
         res.redirect("/");
         return;
@@ -2514,7 +2796,7 @@ site.get('/myPrivateMiis', (req, res) => {
         return;
     }
     
-    var toSend = getSendables(req);
+    var toSend = await getSendables(req);
     const user = storage.users[req.cookies.username];
     
     if (!user.privateMiis) user.privateMiis = [];
@@ -2532,7 +2814,7 @@ site.get('/myPrivateMiis', (req, res) => {
         res.send(str);
     });
 });
-site.get('/manageCategories', (req, res) => {
+site.get('/manageCategories', async (req, res) => {
     if (!req.cookies.username) {
         res.redirect("/");
         return;
@@ -2549,7 +2831,7 @@ site.get('/manageCategories', (req, res) => {
         return;
     }
     
-    var toSend = getSendables(req);
+    var toSend = await getSendables(req);
     toSend.officialCategories = storage.officialCategories || {};
     
     ejs.renderFile('./ejsFiles/manageCategories.ejs', toSend, {}, function(err, str) {
@@ -2561,7 +2843,7 @@ site.get('/manageCategories', (req, res) => {
         res.send(str);
     });
 });
-site.get('/changePfp', (req, res) => {
+site.get('/changePfp', async (req, res) => {
     if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
         res.send(`{"okay":false,"msg":"Invalid account"}`);
         return;
@@ -2575,7 +2857,7 @@ site.get('/changePfp', (req, res) => {
         res.send(`{"okay":false,"msg":"Invalid Mii ID"}`);
     }
 });
-site.get('/changeUser', (req, res) => {
+site.get('/changeUser', async (req, res) => {
     if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token)) {
         res.send(`{"okay":false,"msg":"Invalid account"}`);
         return;
@@ -2601,7 +2883,7 @@ site.get('/changeUser', (req, res) => {
                 "footer": {
                     "text": `Changed at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
                 },
-                "url": `https://miis.kestron.com/user?user=${req.query.newUser}`
+                "url": `https://miis.kestron.com/user/${req.query.newUser}`
             }]
         }));
         save();
@@ -2612,7 +2894,7 @@ site.get('/changeUser', (req, res) => {
         res.send(`{"okay":false,"msg":"Username invalid"}`);
     }
 });
-site.get('/changehighlightedMii', (req, res) => {
+site.get('/changehighlightedMii', async (req, res) => {
     if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token) || !storage.users[req.cookies.username].roles.includes('moderator')) {
         res.send(`{"okay":false,"msg":"Invalid account"}`);
         return;
@@ -2636,7 +2918,7 @@ site.get('/changehighlightedMii', (req, res) => {
                     },
                     {
                         "name": `Uploaded by`,
-                        "value": `[${mii.uploader}](https://miis.kestron.com/user?user=${mii.uploader})`,
+                        "value": `[${mii.uploader}](https://miis.kestron.com/user/${mii.uploader})`,
                         "inline": true
                     },
                     {
@@ -2653,7 +2935,7 @@ site.get('/changehighlightedMii', (req, res) => {
                 "footer": {
                     "text": `New Highlighted Mii set by ${req.cookies.username}`
                 },
-                "url": `https://miis.kestron.com/mii?id=` + mii.id
+                "url": `https://miis.kestron.com/mii/` + mii.id
             }]
         }));
         save();
@@ -2683,7 +2965,7 @@ site.get('/reportMii',(req,res)=>{
                 },
                 {
                     "name": `Uploaded by`,
-                    "value": `[${mii.uploader}](https://miis.kestron.com/user?user=${mii.uploader})`,
+                    "value": `[${mii.uploader}](https://miis.kestron.com/user/${mii.uploader})`,
                     "inline": true
                 },
                 {
@@ -2700,7 +2982,7 @@ site.get('/reportMii',(req,res)=>{
             "footer": {
                 "text": `Mii has been reported by ${req.cookies.username?req.cookies.username:"Anonymous"}`
             },
-            "url": `https://miis.kestron.com/mii?id=` + mii.id
+            "url": `https://miis.kestron.com/mii/` + mii.id
         }]
     }));
     res.send(`{"okay":true}`);
@@ -2714,6 +2996,26 @@ site.get('/miiWii',async (req,res)=>{
     res.setHeader('Content-Disposition', `attachment; filename="${req.query.id}.mii"`);
     res.setHeader('Content-Type', 'application/octet-stream');
     res.send(miiBuffer);
+});
+site.get('/faq', async (req, res) => {
+    ejs.renderFile('./ejsFiles/faq.ejs', await getSendables(req), {}, function(err, str) {
+        if (err) {
+            res.send(err);
+            console.log(err);
+            return;
+        }
+        res.send(str);
+    });
+});
+site.get('/cite', async (req, res) => {
+    ejs.renderFile('./ejsFiles/cite.ejs', await getSendables(req), {}, function(err, str) {
+        if (err) {
+            res.send(err);
+            console.log(err);
+            return;
+        }
+        res.send(str);
+    });
 });
 // Change Email (User)
 site.post('/changeEmail', async (req, res) => {
@@ -2976,7 +3278,7 @@ site.post('/deleteAccount', async (req, res) => {
     }
 });
 
-site.get('/getInstructions', (req, res) => {
+site.get('/getInstructions', async (req, res) => {
     try {
         const miiId = req.query.id;
         const format = req.query.format || '3ds'; // '3ds' or 'wii'
@@ -3125,7 +3427,7 @@ site.post('/uploadMii', upload.single('mii'), async (req, res) => {
                     },
                     {
                         "name": `Uploaded by`,
-                        "value": `[${uploader}](https://miis.kestron.com/user?user=${uploader})`,
+                        "value": `[${uploader}](https://miis.kestron.com/user/${uploader})`,
                         "inline": true
                     },
                     {
@@ -3140,7 +3442,7 @@ site.post('/uploadMii', upload.single('mii'), async (req, res) => {
                     "width": 0
                 },
                 "footer": {
-                    "text": `View: https://miis.kestron.com/mii?id=${mii.id} | Uploaded at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
+                    "text": `View: https://miis.kestron.com/mii/${mii.id} | Uploaded at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
                 }
             }]
         }));
@@ -3197,7 +3499,7 @@ site.post('/updateOfficialCategories', async (req, res) => {
                 fields: [
                     {
                         name: 'Mii',
-                        value: `[${mii.meta?.name || mii.name}](https://miis.kestron.com/mii?id=${miiId})`,
+                        value: `[${mii.meta?.name || mii.name}](https://miis.kestron.com/mii/${miiId})`,
                         inline: true
                     },
                     {
@@ -3221,7 +3523,7 @@ site.post('/updateOfficialCategories', async (req, res) => {
     }
 });
 // Get all official categories (nested structure)
-site.get('/getOfficialCategories', (req, res) => {
+site.get('/getOfficialCategories', async (req, res) => {
     try {
         if (!storage.officialCategories) {
             storage.officialCategories = { categories: [] };
@@ -3641,7 +3943,7 @@ site.post('/moveCategory', async (req, res) => {
     }
 });
 // Get all official categories (for building forms)
-site.get('/getOfficialCategories', (req, res) => {
+site.get('/getOfficialCategories', async (req, res) => {
     try {
         if (!storage.officialCategories) {
             storage.officialCategories = {};
@@ -3731,7 +4033,7 @@ site.post('/publishMii', async (req, res) => {
                     },
                     {
                         "name": `Published by`,
-                        "value": `[${req.cookies.username}](https://miis.kestron.com/user?user=${req.cookies.username})`,
+                        "value": `[${req.cookies.username}](https://miis.kestron.com/user/${req.cookies.username})`,
                         "inline": true
                     }
                 ],
@@ -3741,7 +4043,7 @@ site.post('/publishMii', async (req, res) => {
                     "width": 0
                 },
                 "footer": {
-                    "text": `View: https://miis.kestron.com/mii?id=${miiId} | Published at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
+                    "text": `View: https://miis.kestron.com/mii/${miiId} | Published at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
                 }
             }]
         }));
@@ -3860,7 +4162,7 @@ site.post('/convertMii', upload.single('mii'), async (req, res) => {
         res.send("{'okay':false}");
     }
 });
-site.post('/signup', (req, res) => {
+site.post('/signup', async (req, res) => {
     if (storage.users[req.body.username] || !validate(req.body.username)) {
         res.send("Username Invalid");
         return;
@@ -3893,7 +4195,7 @@ site.post('/signup', (req, res) => {
     res.send("Check your email to verify your account!");
     save();
 });
-site.post('/login', (req, res) => {
+site.post('/login', async (req, res) => {
     if (storage.users[req.body.username].pass === validatePassword(req.body.pass, storage.users[req.body.username].salt), storage.users[req.body.username].pass) {
         if (storage.users[req.body.username].verified) {
             var token = genToken();

@@ -1,14 +1,30 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title><%= mii.meta.name %> - InfiniMii</title>
-        <meta content="<%= mii.meta.name %>" property="og:title" />
-        <meta content="<%= mii.desc %>" property="og:description" />
-        <meta content="https://miis.kestron.com/mii?id=<%= mii.id %>" property="og:url" />
-        <meta content="https://miis.kestron.com/miiImgs/<%= mii.id %>.jpg" property="og:image" />
-        <meta content="#ff0000" data-react-helmet="true" name="theme-color" />
-        <link rel="stylesheet" href="global.css">
-        <link rel="stylesheet" href="miiPage.css">
+        <%
+        // Set page-specific variables for meta tags
+        const pageTitle = `${mii.meta.name} - InfiniMii | Download Mii Character`;
+        const pageDesc = mii.desc || `Download ${mii.meta.name} Mii character${mii.official ? ' (Official Nintendo Mii)' : ''} for Wii, 3DS, Wii U, Switch. Get QR code and convert to any format.`;
+        const canonicalUrl = `https://yourdomain.com/mii/${mii.id}`;
+        const ogImage = `https://yourdomain.com/miiImgs/${mii.id}.jpg`;
+        const ogType = 'article';
+        const keywords = `${mii.meta.name}, ${mii.official ? 'official ' : ''}mii character, download mii, mii qr code`;
+        const breadcrumbs = [
+            { name: 'Home', url: '/' },
+            { name: mii.official ? 'Official Miis' : 'Community Miis', url: mii.official ? '/official' : '/top' },
+            { name: mii.meta.name, url: `/mii/${mii.id}` }
+        ];
+        %>
+        
+        <%- include('../ejsPartials/metaTags', { title: pageTitle, description: pageDesc, canonicalUrl, ogImage, ogType, keywords }) %>
+        <%- include('../ejsPartials/structuredData', { breadcrumbs }) %>
+        <%- include('../ejsPartials/miiSchema', { mii }) %>
+        
+        <link rel="stylesheet" href="/global.css">
+        <link rel="stylesheet" href="/miiPage.css">
+        
+        <!-- Preload hero image -->
+        <link rel="preload" as="image" href="/miiImgs/<%= mii.id %>.jpg">
     </head>
     <body>
         <% 
@@ -17,34 +33,41 @@
         %>
         <%- partials.header %>
         <%- partials.accountDisplay %>
-        <div class="content">
+        <main class="content" role="main">
             <%- partials.sidebar %>
 
-            <div class="mii-id-card">
+            <article class="mii-id-card" itemscope itemtype="https://schema.org/CreativeWork">
                 <!-- Card Header -->
-                <div class="id-card-header">
-                    <h2>Mii ID Card</h2>
-                    <div class="card-number" onclick="copyId()">ID: <%= mii.id %></div>
-                </div>
+                <header class="id-card-header">
+                    <h2 itemprop="name">Mii ID Card</h2>
+                    <div class="card-number" role="button" tabindex="0" onclick="copyId()" aria-label="Copy Mii ID">ID: <%= mii.id %></div>
+                </header>
 
                 <!-- Main Card Body -->
                 <div class="id-card-body">
                     <!-- Left side: Mii Image -->
-                    <div class="id-card-photo">
+                    <figure class="id-card-photo">
                         <img src="/<%= imgPath %>/<%= mii.id %>.jpg" 
                             onerror="this.src='/<%= imgPath %>/<%= mii.id %>.png'"
-                            alt="<%= mii.meta?.name || mii.name %>">
-                        <div class="qr-code">
+                            alt="<%= mii.meta.name %> Mii Character Face"
+                            itemprop="image"
+                            width="400" 
+                            height="400"
+                            fetchpriority="high">
+                        <figcaption class="qr-code">
                             <a href="/<%= qrPath %>/<%= mii.id %>.jpg" target="_blank">
                                 <img src="/<%= qrPath %>/<%= mii.id %>.jpg" 
                                     onerror="this.src='/<%= qrPath %>/<%= mii.id %>.png'"
-                                    alt="QR Code">
+                                    alt="QR Code for <%= mii.meta.name %> - Scan with 3DS, Wii U, Tomodachi Life, or Miitomo" 
+                                    width="200" 
+                                    height="200"
+                                    loading="lazy">
                             </a>
-                            <a href="/<%= qrPath %>/<%= mii.id %>.jpg" target="_blank">
+                            <a href="/<%= qrPath %>/<%= mii.id %>.jpg" target="_blank" rel="noopener">
                                 <span>Download for 3DS</span>
                             </a>
-                        </div>
-                    </div>
+                        </figcaption>
+                    </figure>
 
                     <!-- Right side: Information -->
                     <div class="id-card-info">
@@ -54,7 +77,7 @@
                             <% if(mii.meta.creatorName?.length>0){ %>
                             <div class="info-item">
                                 <span class="info-label">Creator Name</span>
-                                <span class="info-value"><%= mii.meta.creatorName %></span>
+                                <span class="info-value" itemprop="creator"><%= mii.meta.creatorName %></span>
                             </div>
                             <% } %>
                             
@@ -403,16 +426,16 @@
                     <% } else{%>
                     <div class="uploader-info">
                         <span class="label">Uploaded by</span>
-                        <a href="/user?user=<%= mii.uploader %>"><%= mii.uploader %></a>
-                        <span class="date">on <%= new Date(mii.uploadedOn).toLocaleDateString() %></span>
+                        <a href="/user/<%= mii.uploader %>"><%= mii.uploader %></a>
+                        <time class="date" datetime="<%= new Date(mii.uploadedOn).toISOString() %>" itemprop="datePublished">on <%= new Date(mii.uploadedOn).toLocaleDateString() %></time>
                     </div>
                     <% } %>
                 </div>
                 <!-- Description -->
                 <% if(mii.desc && mii.desc.length > 0) { %>
                     <div class="id-card-description">
-                        <h3>About</h3>
-                        <p><%= mii.desc %></p>
+                        <h3 class="info-label">Description</h3>
+                        <p itemprop="description"><%= mii.desc %></p>
                     </div>
                 <% } %>
 
@@ -551,7 +574,11 @@
                                     <path d="M13.35 20.13c-.76.69-1.93.69-2.69-.01l-.11-.1C5.3 15.27 1.87 12.16 2 8.28c.06-1.7.93-3.33 2.34-4.29 2.64-1.8 5.9-.96 7.66 1.1 1.76-2.06 5.02-2.91 7.66-1.1 1.41.96 2.28 2.59 2.34 4.29.14 3.88-3.3 6.99-8.55 11.76l-.1.09z"/>
                                 </svg>
                             <% } %>
-                            <span class="vote-count"><%= mii.votes %></span>
+                            <span class="vote-count" itemprop="interactionStatistic" itemscope itemtype="https://schema.org/InteractionCounter">
+                                <meta itemprop="interactionType" content="https://schema.org/LikeAction">
+                                <meta itemprop="userInteractionCount" content="<%= mii.votes || 0 %>">
+                                <%= mii.votes||0 %>
+                            </span>
                         </span>
 
                         <% if(users[thisUser].roles.includes('moderator')||users[thisUser].submissions.includes(mii.id)){ %>
@@ -636,9 +663,9 @@
                         </div>
                     </div>
                 <% } %>
-            </div>
+            </article>
             <%- partials.featuredMiis %>
-        </div>
+        </main>
         
         <%- partials.footer %>
         

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Error - InfiniMii</title>
+        <link rel="stylesheet" href="/global.css">
+        <style>
+            .error-container {
+                max-width: 600px;
+                margin: 50px auto;
+                padding: 30px;
+                text-align: center;
+            }
+            
+            .error-icon {
+                font-size: 64px;
+                margin-bottom: 20px;
+            }
+            
+            .error-title {
+                font-size: 24px;
+                color: #d32f2f;
+                margin-bottom: 15px;
+            }
+            
+            .error-message {
+                font-size: 16px;
+                color: #666;
+                margin-bottom: 30px;
+                line-height: 1.5;
+            }
+            
+            .error-actions {
+                display: flex;
+                gap: 15px;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .error-btn {
+                padding: 10px 20px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 14px;
+                text-decoration: none;
+                display: inline-block;
+            }
+            
+            .btn-primary {
+                background-color: #4CAF50;
+                color: white;
+            }
+            
+            .btn-primary:hover {
+                background-color: #45a049;
+            }
+            
+            .btn-secondary {
+                background-color: #666;
+                color: white;
+            }
+            
+            .btn-secondary:hover {
+                background-color: #555;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <a href="/"><img src='/banner.png' alt="InfiniMii"></a>
+        </header>
+        
+        <div class="error-container">
+            <div class="error-icon">⚠️</div>
+            <h1 class="error-title">Oops! Something went wrong</h1>
+            <p class="error-message"><%= message || 'An unexpected error occurred.' %></p>
+            
+            <div class="error-actions">
+                <% if (redirectUrl) { %>
+                    <a href="<%= redirectUrl %>" class="error-btn btn-primary">Go Back</a>
+                <% } %>
+                <a href="/" class="error-btn btn-secondary">Home</a>
+            </div>
+        </div>
+        
+        <%- partials.footer %>
+    </body>
+</html>

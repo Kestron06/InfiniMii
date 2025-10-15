@@ -1,10 +1,15 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title><%= title %></title>
+        <%- partials.metaTags %>
+        <%- partials.structuredData %>
 		<link href="./global.css" rel="stylesheet">
 		<link href="./index.css" rel="stylesheet">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <!-- Preload critical resources -->
+        <link rel="preload" as="image" href="/banner.png">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com">
 	</head>
 	<body>
 		<%- partials.header %>
@@ -16,7 +21,7 @@
 					<div class="miiCategory">
 						<h1><a href="<%= miiCategories[cat].link %>"><%= cat %></a></h1>
 						<% miiCategories[cat].miis.forEach(mii=>{ %>
-							<a class="miiThumb" href="/mii?id=<%= mii.id %>">
+							<a class="miiThumb" href="/mii/<%= mii.id %>">
 								<img src="./miiImgs/<%= mii.id %>.jpg">
 								<h3><%= mii.meta.name %></h3>
 							</a>

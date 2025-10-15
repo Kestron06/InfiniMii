@@ -1,0 +1,55 @@
+.upload-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.tab-button {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    background-color: var(--layer-3);
+    color: var(--text-2);
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    font-family: Poppins, sans-serif;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.tab-button.active {
+    background-color: var(--layer-2);
+    color: var(--brand-color);
+    font-weight: 600;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.format-hint {
+    background-color: var(--layer-1);
+    padding: 1rem;
+    border-radius: 6px;
+    margin: 1rem 0;
+    color: var(--text-2);
+    font-size: 14px;
+}
+
+.studio-preview {
+    margin-top: 1rem;
+    display: none;
+}
+
+.studio-preview.active {
+    display: block;
+}
+
+.studio-preview img {
+    max-width: 200px;
+    border-radius: 8px;
+    margin-top: 0.5rem;
+}

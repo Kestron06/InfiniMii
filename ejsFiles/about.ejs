@@ -1,254 +1,158 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
-        <title>Transferring Miis Guide - InfiniMii</title>
-        <link rel="stylesheet" href="./global.css">
-        <link rel="stylesheet" href="utilityPages.css">
+        <%
+        const pageTitle = 'About InfiniMii - The Ultimate Mii Character Platform';
+        const pageDesc = 'InfiniMii is the most comprehensive Mii character repository and toolkit. Convert, share, and download Miis for all Nintendo systems. Learn about our mission and features.';
+        const canonicalUrl = 'https://yourdomain.com/about';
+        const keywords = 'about infinimii, mii platform, mii repository, mii community';
+        %>
+        <%- partials.metaTags %>
+        <%- partials.structuredData %>
+        
+        <link rel="stylesheet" href="/global.css">
+        <link rel="stylesheet" href="/utilityPages.css">
+        <style>
+            li{
+                list-style-type:disc;
+                margin:0px;
+            }
+        </style>
     </head>
     <body>
         <%- partials.header %>
         <%- partials.accountDisplay %>
-        <div class="content">
+        
+        <main class="content about-content" role="main">
             <%- partials.sidebar %>
-            <div class="guide-container">
-                <article>
-                    <h1>
-                        Transferring Miis On and Off Systems
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="top" title="Copy link to this section">🔗</button>
-                    </h1>
-                    <h6>In order of release</h6>
-                    <h3>Table of Contents</h3>
+            
+            <article class="about-article guide-container">
+                
+                <article class="intro-article">
+                    <h2>About InfiniMii</h2>
+                    <p class="lead">InfiniMii is the most comprehensive platform for Mii characters, supporting every Nintendo system from the original Wii to the Nintendo Switch 2 and beyond. Convert to and from any format, generate and read QR codes, work with Miis stored on Amiibos, make Special Miis, store, share, and download Miis, and more! All without ever modding your console! InfiniMii is the number one tool for Miis.</p>
+                </article>
+                
+                <article class="features-article">
+                    <h2>What Makes InfiniMii Special</h2>
+                    
+                    <div class="feature-grid">
+                        <div class="feature-card">
+                            <h3>🎮 Universal Compatibility</h3>
+                            <p>Works with Miis from <strong>all Nintendo systems</strong>:</p>
+                            <ul>
+                                <li>Nintendo DS</li>
+                                <li>Nintendo Wii</li>
+                                <li>Nintendo 3DS</li>
+                                <li>Nintendo Wii U</li>
+                                <li>Amiibo</li>
+                                <li>Nintendo Switch</li>
+                                <li>Switch 2</li>
+                                <li>Mii Studio</li>
+                                <li>Tomodachi Life</li>
+                                <li>Miitomo</li>
+                            </ul>
+                            <a href="/transferInstructions">See our Transfer Guide to learn more!</a>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <h3>🔄 Advanced Conversion</h3>
+                            <p>Convert Miis between <strong>any format</strong>, including:</p>
+                            <ul>
+                                <li>Wii ↔ 3DS/Wii U backporting</li>
+                                <li>QR code generation</li>
+                                <li>Binary file conversion</li>
+                                <li>Special format variants</li>
+                                <li>Extract Miis from and insert Miis into Amiibo files</li>
+                                <li>Lossless conversion where possible</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <h3>📚 Massive Repository</h3>
+                            <p>Access thousands of Miis including:</p>
+                            <ul>
+                                <li>Official Nintendo Miis from games</li>
+                                <li>Community-created characters</li>
+                                <li>Celebrity and character recreations</li>
+                                <li>Original designs</li>
+                                <li>The statistically Average Mii</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <h3>📱 QR Code Support</h3>
+                            <p>Full QR code functionality:</p>
+                            <ul>
+                                <li>Scan QR codes from images</li>
+                                <li>Generate QR codes for any Mii</li>
+                                <li>3DS/Wii U compatible</li>
+                                <li>Works with all official Mii QR formats</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <h3>☁️ Personal Mii Bank</h3>
+                            <p>Your private Mii collection:</p>
+                            <ul>
+                                <li>Store Miis privately online</li>
+                                <li>Access from any device</li>
+                                <li>Sync between systems</li>
+                                <li>Family and friend Miis</li>
+                                <li>Backup your creations</li>
+                            </ul>
+                        </div>
+                    </div>
+                </article>
+                
+                <article class="average-mii-article">
+                    <h2>The Average Mii Project</h2>
+                    <p>One of InfiniMii's unique features is <strong>The Average Mii</strong> - a statistically calculated Mii that represents the most common characteristics across all Miis in our database. This is the closest representation of "John Doe" or "Jane Doe" in Mii form, updated regularly as new Miis are added.</p>
+                    <a href="/mii/average" class="btn-primary">View the Average Mii</a>
+                </article>
+                
+                <article class="community-article">
+                    <h2>Join the Community</h2>
+                    <p>InfiniMii is more than just a tool - it's a community of Mii enthusiasts.</p>
                     <ul>
-                        <li><a href="#ds">DS</a></li>
-                        <li><a href="#wii">Wii</a></li>
-                        <li><a href="#3ds">3DS Family of Systems</a></li>
-                        <li><a href="#wiiu">Wii U</a></li>
-                        <li><a href="#amiibo">Amiibo</a></li>
-                        <li><a href="#switch">Switch/2</a></li>
-                        <li><a href="#studio">Mii Studio</a></li>
+                        <li><strong>Monthly Contests</strong> - Create Miis based on themes, with top submissions featured</li>
+                        <li><strong>Official Mii Research</strong> - Apply here to help document official Miis</li>
+                        <li><strong>Further Development</strong> - We're open source! Contribute to improving InfiniMii and the MiiJS library that powers it!</li>
+                        <li><strong>Community Sharing</strong> - Share your best creations with fellow enthusiasts</li>
                     </ul>
-                    <p>
-                        In the case of all systems on this list, recreating the Mii from scratch will functionally work, with the exception of Amiibo which do have to be transferred at least somewhere first (some DS games only supported importing from a Wii, but these are obscure and unlikely to be referenced). All Miis on this website should be able to generate instructions for every official Mii creator tool still available. The purposes of this guide will be to transfer Miis off of one of those systems to upload here, and to transfer to those systems. Recreation is an assumed possibility in all cases but Amiibo.<br><br>
-                        Unofficial Mii Makers will not be listed here. External programs to assist in loading the Miis to and from the console may be mentioned, but should not require modding the console for the scope of this guide.
-                    </p>
+                    <a href="<%= discordInvite %>" class="btn-secondary" target="_blank" rel="noopener">Join Our Discord</a>
                 </article>
                 
-                <article id="ds">
-                    <h2>
-                        DS
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="ds" title="Copy link to this section">🔗</button>
-                    </h2>
-                    <p>
-                        Miis on the DS are extremely limited. Only a few games support them, most of which are Japan exclusive. The main Mii game on DS is <em>Tomodachi Collection</em>, which only released in Japan.<br><br>
-                        The only known method of transferring Miis to a DS (or DSi) is from a Wii via its Mii Channel's initially hidden "Connect to DS" feature. To my knowledge, there is <b>no supported way to export a Mii from a DS</b> to a Wii or anywhere else, aside from recreating the Mii manually.
-                    </p>
-                    
-                    <h4 id="ds-activate">
-                        Activating Wii → DS Transfer
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="ds-activate" title="Copy link to this section">🔗</button>
-                    </h4>
-                    <p>
-                        To activate the Wii → DS path, open the Wii's Mii Channel. If you don't see a DS icon, press and release <b>A</b>, then press and release <b>B</b>, then press and release <b>1</b>, and then press and hold <b>2</b>. After that, the DS icon should appear. This process only needs to be done once.<br><br>
-                        You can then click the DS icon to begin transferring to the DS game.
-                    </p>
-                    
-                    <h4 id="ds-games">
-                        Importing in DS Games
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="ds-games" title="Copy link to this section">🔗</button>
-                    </h4>
-                    <p>
-                        In Tomodachi Collection, you can import Miis from the Wii via the option in Town Hall after you have made at least three Mii residents on the island. In every other game, the option will be found shortly after entering the game or in Final Fantasy's case unlocking the item that allows this transfer to be done. You will be looking for an option to Import from Wii.
-                    </p>
+                <article class="technology-article">
+                    <h2>Built with MiiJS</h2>
+                    <p>InfiniMii is powered by <strong>MiiJS</strong>, an open-source JavaScript library for Mii manipulation by the same developers. MiiJS enables:</p>
+                    <ul>
+                        <li>Reading and writing all Mii formats</li>
+                        <li>High-quality 3D rendering</li>
+                        <li>QR code generation and parsing</li>
+                        <li>Format conversion with maximum fidelity</li>
+                        <li>Generate recreation instructions</li>
+                        <li>Do everything InfiniMii does, from your own project!</li>
+                    </ul>
+                    <p>MiiJS is available on GitHub and NPM for developers who want to build their own Mii applications.</p>
+                    <a href="https://github.com/Kestron06/MiiJS" class="btn-secondary" target="_blank" rel="noopener">View MiiJS on GitHub</a>
                 </article>
-                
-                <article id="wii">
-                    <h2>
-                        Wii
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="wii" title="Copy link to this section">🔗</button>
-                    </h2>
-                    <p>
-                        Transferring Miis to and from the Wii is, to me, one of the most thematically fun as the vehicle for doing so will be the Wiimote.<br><br>
-                        To start, open the Wii's Mii Channel. You will be looking for the Wiimote icon in the top right. After clicking it, select the connected Wiimote you would like to take Miis on and off from. Here you have ten slots where you can rearrange Miis. If your goal was to take Miis to the system, this is where you will do so. To take Miis from the system, go ahead and place any Miis into the Wiimote slots, making sure to remember which slot from left to right the Mii was placed in, save, and then power off your Wii.<br><br>
-                        I will likely research and see how difficult it would be to make my own program to streamline this process, but for now this is what it looks like.
-                    </p>
-                    
-                    <h4 id="wii-pc">
-                        Transferring via PC (Windows)
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="wii-pc" title="Copy link to this section">🔗</button>
-                    </h4>
-                    <p>
-                        You will need to pair your Wiimote to your Windows device. This can with some models be done simply through bluetooth settings and putting the Wiimote in sync mode, but the most consistent method I've found is simply to pair the Wiimote in <a target="_blank" href="https://dolphin-emu.org/">Dolphin</a>, and once it is paired, leave Dolphin running but we won't be using it further.<br><br>
-                        You can then use <a target="_blank" href="https://sourceforge.net/projects/wdml/">WDML Mii Transfer</a>. After unzipping the program, with the Wiimote paired, you can use readslotX.bat to transfer a Mii off of the Wiimote and to your device, where X is the slot the Mii you wanted to read was in, minus one (so if the slot was the third from the left, use readslot2.bat). To write a Mii to the Wiimote, first place the Mii file in the same folder as the WDML files. Rename the file miiX.bat, where X is the slot you want to write the Mii to, minus one (so if I wanted to write to the fifth from the left, I would name it mii4.mii). You can then run writeslotX.bat, where X is the same number from miiX.bat.
-                    </p>
-                    
-                    <h4 id="wii-3ds">
-                        Transferring via 3DS
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="wii-3ds" title="Copy link to this section">🔗</button>
-                    </h4>
-                    <p>
-                        If you have a 3DS, and you're just looking to transfer off of the Wii, the recommended option would be to transfer to your 3DS and use that as your way of getting it off of the console. First open the Wii's Mii Channel. If you don't see the DS icon on the right side of the screen, press and release <b>A</b>, then press and release <b>B</b>, then press and release <b>1</b>, and then press and hold <b>2</b>. After you do this, the DS icon should appear and you can press it. On the 3DS, open Mii Maker, then select "Send and Receive". Tap "Receive from Wii" and follow the prompts on both consoles. You should be able to freely send Miis to the 3DS from here, but not to the Wii. To write to the Wii, you will still have to use the method with a Windows device for now.
-                    </p>
-                </article>
-                
-                <article id="3ds">
-                    <h2>
-                        3DS
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="3ds" title="Copy link to this section">🔗</button>
-                    </h2>
-                    <p>
-                        The 3DS is the easiest console to work with when it comes to transferring Miis. It can get Miis from the Wii (see the <a href="#wii">Wii</a> section), uses QR codes, can upload straight from its web browser, can scan QR codes easily, can write to Amiibos if you have the NFC Reader accessory OR a "New" 3DS (<b>required</b> for directly transferring to and from the Switch/2), and is compatible with Special Miis. The 3DS is, in my opinion, the best console for interacting with Miis.
-                    </p>
-                    
-                    <h4 id="3ds-export">
-                        Exporting Miis from 3DS
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="3ds-export" title="Copy link to this section">🔗</button>
-                    </h4>
-                    <p>
-                        To take Miis off of the 3DS, simply open Mii Maker, select "QR/Image Options", and then "Save Mii as QR Code". Select the Mii, and that's it! The QR code will be displayed on screen and can be scanned by another device using <a href="/qr">this website</a>. You can also find the QR code file in the DCIM folder on your 3DS' SD card, or open this website in the 3DS Internet Browser and upload the image file from there.
-                    </p>
-                    
-                    <h4 id="3ds-import">
-                        Importing Miis to 3DS
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="3ds-import" title="Copy link to this section">🔗</button>
-                    </h4>
-                    <p>
-                        To get Miis onto the 3DS, simply display the QR code using another device. Open the Mii Maker app, then press "QR Code/Image Options", and then "Scan QR Code". Hold the camera up to the QR code, and you're done!
-                        <h6>To transfer directly with the Wii U, see the <a href="#wiiu">Wii U</a> section.</h6>
-                    </p>
-                </article>
-                
-                <article id="wiiu">
-                    <h2>
-                        Wii U
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="wiiu" title="Copy link to this section">🔗</button>
-                    </h2>
-                    <p>
-                        Everything said in the <a href="#3ds">3DS</a> section about working with the QR codes also works on the Wii U in pretty much exactly the same way. The one caveat to note is that if the Mii is considered a Special Mii, the Wii U will be unable to interact with it.
-                    </p>
-                    
-                    <h4 id="wiiu-3ds">
-                        Direct Transfer with 3DS
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="wiiu-3ds" title="Copy link to this section">🔗</button>
-                    </h4>
-                    <p>
-                        To communicate and transfer directly with a 3DS, open both console's Mii Maker and select "Send and Receive". On the 3DS, select to communicate with the Wii U, and on the Wii U, select to communicate with the 3DS. Once connected, Miis can freely be sent in between.
-                    </p>
-                    
-                    <h4 id="wiiu-wii-mode">
-                        Copying from Wii Mode
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="wiiu-wii-mode" title="Copy link to this section">🔗</button>
-                    </h4>
-                    <p>
-                        To send <b>all</b> Miis from the Wii mode of the Wii U to the Wii U's Mii Maker, select "Send and Receive" and then "Copy from Wii Menu". This will copy <b>all</b> Wii mode Miis to the Wii U mode Mii Maker at once, and Miis cannot be sent in the other direction.
-                    </p>
-                </article>
-                
-                <article id="amiibo">
-                    <h2>
-                        Amiibo
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="amiibo" title="Copy link to this section">🔗</button>
-                    </h2>
-                    <p>
-                        Amiibo are going to get their own section due to being the only unmodded mode of transport with the Switch/2, and being able to be interacted with via the 3DS and Wii U as well. Each Amiibo can hold a single Mii, and do this by registering an owner of the Amiibo.
-                    </p>
-                    
-                    <h4 id="amiibo-3ds">
-                        Using Amiibo with 3DS
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="amiibo-3ds" title="Copy link to this section">🔗</button>
-                    </h4>
-                    <p>
-                        On the 3DS open the home menu settings (the icon on the top left of the home menu on the touch screen) and select "Amiibo Settings". You can then scan your Amiibo, and follow the prompts to register or change the Mii associated with the Amiibo. You will need either a "New" 3DS/2DS, or an NFC Reader accessory.
-                    </p>
-                    
-                    <h4 id="amiibo-wiiu-switch">
-                        Using Amiibo with Wii U and Switch/2
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="amiibo-wiiu-switch" title="Copy link to this section">🔗</button>
-                    </h4>
-                    <p>
-                        To transfer off of both the Wii U or Switch/2, open System Settings. Find and select "Amiibo Settings". You will then want to either Register or Change the Owner of the Amiibo, and you can then load your Mii onto the Amiibo from there.<br><br>
-                        On the Switch/2, open Settings and find the Mii menu. Select to Create a New Mii, and then Copy Mii from Amiibo. Tap your Amiibo, and the Mii will be transferred.<br><br>
-                        To my knowledge only the Switch/2 can copy a Mii from an Amiibo.
-                    </p>
 
-                    <h4 id="amiibo-phone">
-                        Using Amiibo with Phones
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="amiibo-wiiu-switch" title="Copy link to this section">🔗</button>
-                    </h4>
-                    <p>
-                        Amiibos can be interacted with using NFC enabled phones.
-                        <ul>
-                            <li>
-                                <b>Android: <a target="_blank" href="https://play.google.com/store/apps/details?id=com.hiddenramblings.tagmo.eightbit&hl=en_US&pli=1">Tagmo</a></b><br>
-                                To use Tagmo after selecting your Amiibo key files, press the "nfc" button in the bottom right, and then "Create Backup". After scanning your Amiibo, this will create a .bin file representing the data your Amiibo transmits. This file can be uploaded to <a href="/amiibo">our Amiibo page</a> to interact with further.<br>
-                                To write to your Amiibo, place the new .bin file in Tagmo's folder. Making sure the filename is right on Tagmo's main screen (you may need to drag down to refresh), tap it and then tap "Update". Scan your Amiibo once more, and the Mii will be available on the Amiibo.
-                            </li>
-                            <li>
-                                <b>iOS: <a target="_blank" href="https://www.reddit.com/r/tagmo/comments/ynxonu/list_of_ios_iphone_amiibo_apps/">Reddit Thread with a List of Options</a></b><br>
-                                There is no known really good option for iOS. All I am aware of are paid, or limit the amount of writes you can do before paying. If this ever changes, please feel free to contact me at the link in the footer. For the time being, the linked Reddit thread lists some options you can pay for, or wade through the limited free writes on. I use an Android as my primary phone, so I use Tagmo and have no use for paid iPhone apps. If a free option becomes available, let me know and I will become acquainted with its use and add it to this guide.
-                            </li>
-                        </ul>
-                    </p>
+                <article class="open-source-article">
+                    <h2>Open Source</h2>
+                    <p>InfiniMii and the library that powers it, MiiJS, are both fully free and open source! You can see how everything works and contribute changes! With no ads or premium tiers to unlock functionality, InfiniMii is the perfect tool and Social Miidia to add to your arsenal.</p>
                 </article>
                 
-                <article id="switch">
-                    <h2>
-                        Switch/2
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="switch" title="Copy link to this section">🔗</button>
-                    </h2>
-                    <p>
-                        The Switch is the most isolated the Miis have ever been, and can only transfer Miis with other Switch/2s, OR by using an Amiibo, which you can read more about in the <a href="#amiibo">Amiibo</a> section.
-                    </p>
-                    
-                    <h4 id="switch-transfer">
-                        Transferring Between Switch/2 Systems
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="switch-transfer" title="Copy link to this section">🔗</button>
-                    </h4>
-                    <p>
-                        To transfer a Mii between two Switch/2s, open the System Settings, then the Mii menu, and find the Send/Receive and "Search for Users to Connect With" options. Once both Switch/2s do this, you can connect them and transfer freely.
-                    </p>
+                <article class="disclaimer-article">
+                    <h2>Disclaimer</h2>
+                    <p>InfiniMii is an independent fan project and is not affiliated with, endorsed by, or associated with Nintendo Co., Ltd. Nintendo, Mii, Wii, Nintendo DS, Nintendo 3DS, Wii U, Amiibo, Nintendo Switch, Switch 2, Tomodachi Life, and Miitomo are trademarks of Nintendo Co., Ltd.</p>
                 </article>
-                
-                <article id="studio">
-                    <h2>
-                        Mii Studio
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="studio" title="Copy link to this section">🔗</button>
-                    </h2>
-                    <p>
-                        Mii Studio is Nintendo's online offering that exists primarily to provide profile pictures for your Nintendo account. After making sure your device is logged into <a href="https://accounts.nintendo.com/" target="_blank">https://accounts.nintendo.com/</a>, you can open Mii Studio <a href="https://my.nintendo.com/mii" target="_blank">here</a>.
-                    </p>
-                    
-                    <h4 id="studio-tools">
-                        Using Third-Party Tools
-                        <button class="copy-link-btn" onclick="copyArticleLink(this)" data-section="studio-tools" title="Copy link to this section">🔗</button>
-                    </h4>
-                    <p>
-                        To transfer Miis in and out of Mii Studio without direct recreation, you will need a tool of some kind. I will likely write my own at some point, but for the time being, <a href="https://mii.tools/studioloader/" target="_blank">this browser extension</a> by HEYimHeroic is able to help with this. After installing, go to <a href="https://my.nintendo.com/mii" target="_blank">Mii Studio</a>, edit a Mii, and make sure to make a small change even if you revert it right after. Once you do this, open the extension and the code for the Mii should be displayed. If you enter a code in the box, you can automatically import a Mii using the code. These codes can be found on Mii pages on this site, and can be used to upload as well.
-                    </p>
-                </article>
-            </div>
+            </article>
+            
             <%- partials.featuredMiis %>
-        </div>
+        </main>
+        
         <%- partials.footer %>
-        <script src="global.js"></script>
-        <script>
-            function copyArticleLink(button) {
-                const section = button.getAttribute('data-section');
-                const url = section === 'top' ? window.location.href.split('#')[0] : `${window.location.href.split('#')[0]}#${section}`;
-                
-                navigator.clipboard.writeText(url).then(() => {
-                    const originalText = button.textContent;
-                    button.textContent = '✓';
-                    button.style.color = 'var(--brand-color)';
-                    
-                    setTimeout(() => {
-                        button.textContent = originalText;
-                        button.style.color = '';
-                    }, 2000);
-                }).catch(err => {
-                    console.error('Failed to copy link:', err);
-                    alert('Failed to copy link');
-                });
-            }
-        </script>
+        <script src="global.js" defer></script>
     </body>
 </html>

@@ -1,3 +1,28 @@
+/* Use system fonts for faster loading */
+:root {
+    --system-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Optimize font loading */
+@font-face {
+    font-family: 'Poppins';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap; /* Critical for CLS */
+    src: local('Poppins Regular'), local('Poppins-Regular');
+}
+
+/* Optimize animations for performance */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
 @font-face {
     font-display: swap;
     font-family: 'Poppins';
@@ -390,6 +415,7 @@ input[type="text"],
 input[type="password"],
 input[type="email"],
 input[type="file"],
+input[type="search"],
 select,
 textarea {
     width: 100%;
@@ -554,4 +580,152 @@ fieldset a:hover {
     footer ul {
         justify-content: center;
     }
+}
+
+/* Footer Styles */
+.site-footer {
+    background: var(--layer-2);
+    border-top: 3px solid var(--brand-color);
+    margin-top: 4rem;
+    padding: 3rem 2rem 1rem;
+}
+
+.footer-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto 2rem;
+}
+
+.footer-section h3 {
+    color: var(--brand-color);
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.footer-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-section ul li {
+    margin-bottom: 0.5rem;
+}
+
+.footer-section ul li a {
+    color: var(--text-2);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.footer-section ul li a:hover {
+    color: var(--brand-color);
+}
+
+.footer-bottom {
+    text-align: center;
+    padding-top: 2rem;
+    border-top: 1px solid var(--layer-3);
+    color: var(--text-2);
+    font-size: 0.9rem;
+}
+
+.footer-bottom a {
+    color: var(--brand-color);
+    text-decoration: none;
+}
+
+.footer-bottom a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    .footer-content {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .footer-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Screen reader only class for accessibility */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+
+
+/* --- Isolate legacy footer list styles from the new .site-footer --- */
+.site-footer ul,
+.site-footer .footer-section ul {
+    /* nuke the global flex on footer ul */
+    display: block;
+    max-width: none;
+    gap: 0;
+}
+
+/* Make the lists inside each footer column stack nicely */
+.site-footer .footer-section ul {
+    display: grid;
+    grid-auto-rows: min-content;
+    row-gap: 0.5rem;
+}
+
+/* Prevent long links from blowing out columns */
+.site-footer .footer-section { min-width: 0; }
+.site-footer .footer-section a {
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* --- Strong, predictable grid columns --- */
+.site-footer .footer-content {
+    /* fallback/default: 4 equal columns on wide screens */
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2rem;
+}
+
+/* Large tablets / small laptops: 3 columns */
+@media (max-width: 1100px) {
+    .site-footer .footer-content {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+/* Tablets: 2 columns */
+@media (max-width: 800px) {
+    .site-footer .footer-content {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* Phones: 1 column */
+@media (max-width: 520px) {
+    .site-footer .footer-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Tighten spacing of headings vs lists a bit on small screens */
+@media (max-width: 800px) {
+    .site-footer .footer-section h3 { margin-bottom: 0.6rem; }
 }
