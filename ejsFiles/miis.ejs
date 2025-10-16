@@ -16,7 +16,7 @@
             <div id="browse-miis">
                 <% for(var i=0;i<displayedMiis.length&&i<50;i++){ %>
                     <div class="mii-card" id="<%= displayedMiis[i].id %>">
-                        <a href=<%='/mii/' +displayedMiis[i].id %>><img src="miiImgs/<%= displayedMiis[i].id %>.jpg"></a>
+                        <a href=<%='/mii/' +displayedMiis[i].id %>><img src="miiImgs/<%= displayedMiis[i].id %>.png"></a>
                         <div class="flex">
                             <div>
                                 <h3><%= displayedMiis[i].meta.name %></h3>

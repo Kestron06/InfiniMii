@@ -12,7 +12,7 @@ Generate and scan QR codes
 Build your own with the equally open source [MiiJS](https://github.com/Kestron06/MiiJS)
 
 # Running Your Own
-Installing
+## Installing
 ```bash
 git clone https://github.com/Kestron06/InfiniMii
 cd InfiniMii

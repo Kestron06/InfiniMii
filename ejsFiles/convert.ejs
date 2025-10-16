@@ -4,7 +4,7 @@
         <%
         const pageTitle = 'Convert Mii Characters Between Formats - InfiniMii';
         const pageDesc = 'Free Mii converter tool. Convert Miis between Wii, 3DS, Wii U, and Switch formats. Support for backporting and all Mii file types including QR codes and bin files.';
-        const canonicalUrl = 'https://yourdomain.com/convert';
+        const canonicalUrl = '<%= baseUrl %>/convert';
         const keywords = 'mii converter, convert mii, wii to 3ds, 3ds to wii, mii format converter, backport mii';
 
         // HowTo Schema data
@@ -15,33 +15,33 @@
             {"@type": "HowToSupply", "name": "Mii file (Wii .mii or 3DS .bin) or QR code image"}
         ];
         const howToTools = [
-            {"@type": "HowToTool", "name": "InfiniMii Converter", "url": "https://yourdomain.com/convert"}
+            {"@type": "HowToTool", "name": "InfiniMii Converter", "url": "<%= baseUrl %>/convert"}
         ];
         const howToSteps = [
             {
                 "@type": "HowToStep",
                 "name": "Upload Your Mii File",
                 "text": "Select your Mii file (.mii for Wii, .bin for 3DS, or QR code image) and upload it to the converter.",
-                "url": "https://yourdomain.com/convert#step-1",
-                "image": "https://yourdomain.com/guide-images/upload-step.jpg"
+                "url": "<%= baseUrl %>/convert#step-1",
+                "image": "<%= baseUrl %>/guide-images/upload-step.jpg"
             },
             {
                 "@type": "HowToStep",
                 "name": "Select Source Format",
                 "text": "Choose whether you're converting from Wii, 3DS, Wii U, or a QR code.",
-                "url": "https://yourdomain.com/convert#step-2"
+                "url": "<%= baseUrl %>/convert#step-2"
             },
             {
                 "@type": "HowToStep",
                 "name": "Choose Target Format",
                 "text": "Select the format you want to convert to: Wii Mii, 3DS/Wii U Mii, Special Wii Mii, or Special 3DS Mii.",
-                "url": "https://yourdomain.com/convert#step-3"
+                "url": "<%= baseUrl %>/convert#step-3"
             },
             {
                 "@type": "HowToStep",
                 "name": "Download Converted File",
                 "text": "Click Convert and download your Mii in the new format. The file will be ready to use on your target Nintendo system.",
-                "url": "https://yourdomain.com/convert#step-4"
+                "url": "<%= baseUrl %>/convert#step-4"
             }
         ];
         %>

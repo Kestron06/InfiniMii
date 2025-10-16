@@ -252,7 +252,7 @@
                             </div>
                             
                             <div id="fileUploadSection">
-                                <input type="file" name="mii" id="insertMiiFile" accept=".jpg,.png,.bin">
+                                <input type="file" name="mii" id="insertMiiFile" accept=".jpg,.png,.bin,.mii">
                                 <select name="miiType" id="miiFileType">
                                     <option value="3ds">3DS/Wii U QR Code</option>
                                     <option value="3dsbin">3DS Bin (Encrypted/Decrypted)</option>
@@ -409,7 +409,11 @@
             async function uploadExtractedMii() {
                 if (!extractedMiiData) return;
                 
-                window.location.href = '/mii/' + extractedMiiData.id;
+                // Store the temp Mii ID in sessionStorage
+                sessionStorage.setItem('amiiboMiiId', extractedMiiData.id);
+                
+                // Redirect to upload page
+                window.location.href = '/upload?fromAmiibo=' + extractedMiiData.id;
             }
         </script>
     </body>

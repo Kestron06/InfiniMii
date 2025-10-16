@@ -6,8 +6,8 @@
   "name": "<%= mii.meta.name %>",
   "description": "<%= mii.desc || `${mii.meta.name} - Mii character for Nintendo systems` %>",
   "image": [
-    "<%= baseUrl %>/miiImgs/<%= mii.id %>.jpg",
-    "<%= baseUrl %>/miiQRs/<%= mii.id %>.jpg"
+    "<%= baseUrl %>/miiImgs/<%= mii.id %>.png",
+    "<%= baseUrl %>/miiQRs/<%= mii.id %>.png"
   ],
   "creator": {
     "@type": "<%= mii.official ? 'Organization' : 'Person' %>",
@@ -16,7 +16,7 @@
   "datePublished": "<%= new Date(mii.uploadedOn).toISOString() %>",
   "url": "<%= baseUrl %>/mii/<%= mii.id %>",
   "keywords": "mii character, <%= mii.meta.name %>, nintendo mii, <%= mii.official ? 'official mii' : 'custom mii' %>",
-  "thumbnailUrl": "<%= baseUrl %>/miiImgs/<%= mii.id %>.jpg",
+  "thumbnailUrl": "<%= baseUrl %>/miiImgs/<%= mii.id %>.png",
   "interactionStatistic": {
     "@type": "InteractionCounter",
     "interactionType": "https://schema.org/LikeAction",
@@ -31,7 +31,7 @@
   "@context": "https://schema.org",
   "@type": "Product",
   "name": "<%= mii.meta.name %> Official Mii",
-  "image": "<%= baseUrl %>/miiImgs/<%= mii.id %>.jpg",
+  "image": "<%= baseUrl %>/miiImgs/<%= mii.id %>.png",
   "description": "<%= mii.desc || `Official ${mii.meta.name} Mii character from Nintendo` %>",
   "brand": {
     "@type": "Organization",

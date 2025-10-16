@@ -19,7 +19,7 @@ function deleteMii(id){
 	}
 }
 function highlightedMiiChange(){
-    fetch("/changehighlightedMii?id="+document.getElementById("highlightedMiiID").value).then(d=>d.json()).then(d=>{
+    fetch("/changeHighlightedMii?id="+document.getElementById("highlightedMiiID").value).then(d=>d.json()).then(d=>{
         if(d.okay){
             location.reload();
         }

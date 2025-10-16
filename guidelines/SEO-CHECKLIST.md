@@ -92,13 +92,13 @@
 
 ## Key URLs to Test
 
-1. Homepage: https://yourdomain.com/
-2. Top Miis: https://yourdomain.com/top
-3. Official Miis: https://yourdomain.com/official
-4. Sample Mii: https://yourdomain.com/mii/[sample-id]
-5. User Profile: https://yourdomain.com/user/[sample-user]
-6. Convert: https://yourdomain.com/convert
-7. Upload: https://yourdomain.com/upload
-8. Search: https://yourdomain.com/search
-9. Guide: https://yourdomain.com/guides/transfer
-10. About: https://yourdomain.com/about
+1. Homepage: https://infinimii.com/
+2. Top Miis: https://infinimii.com/top
+3. Official Miis: https://infinimii.com/official
+4. Sample Mii: https://infinimii.com/mii/[sample-id]
+5. User Profile: https://infinimii.com/user/[sample-user]
+6. Convert: https://infinimii.com/convert
+7. Upload: https://infinimii.com/upload
+8. Search: https://infinimii.com/search
+9. Guide: https://infinimii.com/guides/transfer
+10. About: https://infinimii.com/about

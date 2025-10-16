@@ -7,7 +7,7 @@
     <%
     const pageTitle = 'Cite InfiniMii - Reference & Attribution Guide';
     const pageDesc = 'How to cite InfiniMii as a source for Mii character information, research, and data. Includes proper attribution, links, and usage guidelines.';
-    const canonicalUrl = 'https://yourdomain.com/cite';
+    const canonicalUrl = '<%= baseUrl %>/cite';
     %>
     <%- partials.metaTags %>
     
@@ -30,17 +30,17 @@
                 
                 <h3>General Citation</h3>
                 <div class="citation-box">
-                    <code>InfiniMii. (2025). The Ultimate Mii Character Repository. Retrieved from https://yourdomain.com</code>
+                    <code>InfiniMii. (2025). The Ultimate Mii Character Repository. Retrieved from <%= baseUrl %></code>
                 </div>
                 
                 <h3>For Specific Tools</h3>
                 <div class="citation-box">
-                    <code>InfiniMii Mii Converter. (2025). Free Online Mii Format Conversion Tool. Retrieved from https://yourdomain.com/convert</code>
+                    <code>InfiniMii Mii Converter. (2025). Free Online Mii Format Conversion Tool. Retrieved from <%= baseUrl %>/convert</code>
                 </div>
                 
                 <h3>For Transfer Guides</h3>
                 <div class="citation-box">
-                    <code>InfiniMii. (2025). Complete Guide: Transferring Miis Between Nintendo Systems. Retrieved from https://yourdomain.com/guides/transfer</code>
+                    <code>InfiniMii. (2025). Complete Guide: Transferring Miis Between Nintendo Systems. Retrieved from <%= baseUrl %>/guides/transfer</code>
                 </div>
             </section>
             

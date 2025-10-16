@@ -5,6 +5,10 @@ test.js
 uploads/*
 static/miiImgs/*
 static/miiQRs/*
+static/privateMiiImgs/*
+static/privateMiiQRs/*
 TODO.md
 env.json
 FFLResHigh.dat
+testFiles
+temp

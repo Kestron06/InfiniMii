@@ -1,19 +1,26 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>My Private Miis - InfiniMii</title>
-        <link rel='stylesheet' href="global.css">
-        <link rel="stylesheet" href="utilityPages.css">
-        <link rel="stylesheet" href="privateMiis.css">
+        <%
+        const pageTitle = 'My Private Miis - InfiniMii';
+        const pageDesc = 'Manage your private Mii collection. Review, edit, and publish your Miis when ready.';
+        const canonicalUrl = `${baseUrl}/myPrivateMiis`;
+        const keywords = 'private miis, mii collection, manage miis';
+        %>
+        <%- partials.metaTags %>
+        <%- partials.structuredData %>
+        <link rel='stylesheet' href="/global.css">
+        <link rel="stylesheet" href="/utilityPages.css">
+        <link rel="stylesheet" href="/privateMiis.css">
     </head>
     <body>
         <%- partials.header %>
         <%- partials.accountDisplay %>
-        <div class='content'>
+        <main class='content' role="main">
             <%- partials.sidebar %>
             <div class='private-miis-container'>
                 <div class="private-header">
-                    <h1>My Private Miis</h1>
+                    <h1>🔒 My Private Miis</h1>
                     <p class="limit-info">
                         <%= privateMiis.length %> / <%= privateLimit %> private Miis
                     </p>
@@ -21,24 +28,25 @@
                         These Miis are uploaded but not yet published. Only you and moderators can see them.
                         Publish them to make them visible to everyone!
                     </p>
-                    <a href="/upload" class="upload-button">Upload New Mii</a>
+                    <a href="/upload" class="upload-button">📤 Upload New Mii</a>
                 </div>
 
                 <% if(privateMiis.length > 0) { %>
                     <div id="private-miis-grid">
                         <% for(var i=0; i<privateMiis.length; i++){ %>
-                            <div class="private-mii-card" data-mii-id="<%= privateMiis[i].id %>">
-                                <a href="<%= '/mii/'+privateMiis[i].id %>">
-                                    <img src="privateMiiImgs/<%= privateMiis[i].id %>.jpg" 
-                                         onerror="this.src='privateMiiImgs/<%= privateMiis[i].id %>.png'"
-                                         alt="<%= privateMiis[i].meta?.name || privateMiis[i].name %>">
+                            <article class="private-mii-card" data-mii-id="<%= privateMiis[i].id %>">
+                                <a href="<%= '/mii/'+privateMiis[i].id %>" aria-label="View <%= privateMiis[i].meta?.name || privateMiis[i].name %>">
+                                    <img src="/privateMiiImgs/<%= privateMiis[i].id %>.png" 
+                                         onerror="this.src='/privateMiiImgs/<%= privateMiis[i].id %>.png'"
+                                         alt="<%= privateMiis[i].meta?.name || privateMiis[i].name %>"
+                                         loading="lazy">
                                 </a>
                                 <div class="mii-info">
                                     <h3><%= privateMiis[i].meta?.name || privateMiis[i].name %></h3>
                                     <% if(privateMiis[i].desc) { %>
                                         <p class="mii-desc">
-                                            <%= privateMiis[i].desc.length > 60 ? 
-                                                privateMiis[i].desc.substring(0, 60) + '...' : 
+                                            <%= privateMiis[i].desc.length > 80 ? 
+                                                privateMiis[i].desc.substring(0, 80) + '...' : 
                                                 privateMiis[i].desc %>
                                         </p>
                                     <% } %>
@@ -46,33 +54,33 @@
                                         <div class="blocked-notice">
                                             🚫 Blocked from publishing
                                             <% if(privateMiis[i].blockReason) { %>
-                                                <br><small><%= privateMiis[i].blockReason %></small>
+                                                <small><%= privateMiis[i].blockReason %></small>
                                             <% } %>
                                         </div>
                                     <% } %>
                                 </div>
                                 <div class="mii-actions">
                                     <% if(!privateMiis[i].blockedFromPublishing) { %>
-                                        <button class="publish-btn" onclick="publishMii('<%= privateMiis[i].id %>')">
+                                        <button class="publish-btn" onclick="publishMii('<%= privateMiis[i].id %>')" aria-label="Publish <%= privateMiis[i].meta?.name || privateMiis[i].name %>">
                                             📤 Publish
                                         </button>
                                     <% } %>
-                                    <button class="delete-btn" onclick="deleteMii('<%= privateMiis[i].id %>')">
+                                    <button class="delete-btn" onclick="deleteMii('<%= privateMiis[i].id %>')" aria-label="Delete <%= privateMiis[i].meta?.name || privateMiis[i].name %>">
                                         🗑️ Delete
                                     </button>
                                 </div>
-                            </div>
+                            </article>
                         <% } %>
                     </div>
                 <% } else { %>
                     <div class="no-miis">
                         <p>You don't have any private Miis yet.</p>
-                        <a href="/upload" class="upload-button">Upload Your First Mii</a>
+                        <a href="/upload" class="upload-button">📤 Upload Your First Mii</a>
                     </div>
                 <% } %>
             </div>
             <%- partials.featuredMiis %>
-        </div>
+        </main>
         <%- partials.footer %>
         
         <script>

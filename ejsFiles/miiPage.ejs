@@ -5,8 +5,8 @@
         // Set page-specific variables for meta tags
         const pageTitle = `${mii.meta.name} - InfiniMii | Download Mii Character`;
         const pageDesc = mii.desc || `Download ${mii.meta.name} Mii character${mii.official ? ' (Official Nintendo Mii)' : ''} for Wii, 3DS, Wii U, Switch. Get QR code and convert to any format.`;
-        const canonicalUrl = `https://yourdomain.com/mii/${mii.id}`;
-        const ogImage = `https://yourdomain.com/miiImgs/${mii.id}.jpg`;
+        const canonicalUrl = `${baseUrl}/mii/${mii.id}`;
+        const ogImage = `${baseUrl}/miiImgs/${mii.id}.png`;
         const ogType = 'article';
         const keywords = `${mii.meta.name}, ${mii.official ? 'official ' : ''}mii character, download mii, mii qr code`;
         const breadcrumbs = [
@@ -16,15 +16,15 @@
         ];
         %>
         
-        <%- include('../ejsPartials/metaTags', { title: pageTitle, description: pageDesc, canonicalUrl, ogImage, ogType, keywords }) %>
-        <%- include('../ejsPartials/structuredData', { breadcrumbs }) %>
-        <%- include('../ejsPartials/miiSchema', { mii }) %>
+        <%- partials.metaTags %>
+        <%- partials.structuredData %>
+        <%- partials.miiSchema %>
         
         <link rel="stylesheet" href="/global.css">
         <link rel="stylesheet" href="/miiPage.css">
         
         <!-- Preload hero image -->
-        <link rel="preload" as="image" href="/miiImgs/<%= mii.id %>.jpg">
+        <link rel="preload" as="image" href="/miiImgs/<%= mii.id %>.png">
     </head>
     <body>
         <% 
@@ -47,7 +47,7 @@
                 <div class="id-card-body">
                     <!-- Left side: Mii Image -->
                     <figure class="id-card-photo">
-                        <img src="/<%= imgPath %>/<%= mii.id %>.jpg" 
+                        <img src="/<%= imgPath %>/<%= mii.id %>.png" 
                             onerror="this.src='/<%= imgPath %>/<%= mii.id %>.png'"
                             alt="<%= mii.meta.name %> Mii Character Face"
                             itemprop="image"
@@ -55,15 +55,15 @@
                             height="400"
                             fetchpriority="high">
                         <figcaption class="qr-code">
-                            <a href="/<%= qrPath %>/<%= mii.id %>.jpg" target="_blank">
-                                <img src="/<%= qrPath %>/<%= mii.id %>.jpg" 
+                            <a href="/<%= qrPath %>/<%= mii.id %>.png" target="_blank">
+                                <img src="/<%= qrPath %>/<%= mii.id %>.png" 
                                     onerror="this.src='/<%= qrPath %>/<%= mii.id %>.png'"
                                     alt="QR Code for <%= mii.meta.name %> - Scan with 3DS, Wii U, Tomodachi Life, or Miitomo" 
                                     width="200" 
                                     height="200"
                                     loading="lazy">
                             </a>
-                            <a href="/<%= qrPath %>/<%= mii.id %>.jpg" target="_blank" rel="noopener">
+                            <a href="/<%= qrPath %>/<%= mii.id %>.png" target="_blank" rel="noopener">
                                 <span>Download for 3DS</span>
                             </a>
                         </figcaption>
@@ -829,8 +829,55 @@
         </script>
 
         <!--Moderator Tools Functions - Because EJS runs server side, and the client only sees the result of the compilation, this prevents unnecessary JS from loading that doesn't need to be sent-->
-        <% if(users[thisUser]?.roles.includes('moderator')){ %>
+        <% if (users[thisUser] && users[thisUser].roles && users[thisUser].roles.includes('moderator')) { %>
             <script>
+                async function blockMiiFromPublishing() {
+                    const reason = prompt('Enter reason for blocking (optional):');
+                    if (reason === null) return; // User cancelled
+                    
+                    try {
+                        const response = await fetch('/blockMiiFromPublishing', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                miiId: '<%= mii.id %>',
+                                reason: reason 
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        if (result.okay) {
+                            alert('Mii blocked from publishing');
+                            location.reload();
+                        } else {
+                            alert('Error: ' + (result.error || 'Failed to block Mii'));
+                        }
+                    } catch (error) {
+                        alert('Error blocking Mii');
+                    }
+                }
+                
+                async function unblockMiiFromPublishing() {
+                    if (!confirm('Unblock this Mii from publishing?')) return;
+                    
+                    try {
+                        const response = await fetch('/unblockMiiFromPublishing', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ miiId: '<%= mii.id %>' })
+                        });
+                        
+                        const result = await response.json();
+                        if (result.okay) {
+                            alert('Mii unblocked');
+                            location.reload();
+                        } else {
+                            alert('Error: ' + (result.error || 'Failed to unblock Mii'));
+                        }
+                    } catch (error) {
+                        alert('Error unblocking Mii');
+                    }
+                }
                 function toggleModTools() {
                     const content = document.getElementById('modToolsContent');
                     const arrow = document.getElementById('modToolsArrow');

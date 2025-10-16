@@ -308,7 +308,7 @@ function save() {
 function genId() {
     let ret = "";
     let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    while (storage.miiIds.includes(ret) || ret === "") {
+    while (Object.keys(storage.miis).includes(ret) || ret === "") {
         ret = "";
         for (var i = 0; i < 5; i++) {
             ret += chars[Math.floor(Math.random() * chars.length)];
@@ -434,14 +434,42 @@ function sendEmail(to, subj, cont) {
         html: cont
     });
 }
-function makeReport(cont) {
-    fetch(process.env["hookUrl"], {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: cont,
+function makeReport(content, attachments = []) {
+    const formData = new (require('form-data'))();
+    
+    // Add the JSON payload
+    formData.append('payload_json', content);
+    
+    // Add any file attachments
+    attachments.forEach((attachment, index) => {
+        formData.append(`files[${index}]`, attachment.data, {
+            filename: attachment.filename,
+            contentType: attachment.contentType || 'image/png'
+        });
     });
+    
+    // Send using form-data instead of JSON
+    const https = require('https');
+    const url = new URL(process.env.hookUrl);
+    
+    const options = {
+        hostname: url.hostname,
+        path: url.pathname + url.search,
+        method: 'POST',
+        headers: formData.getHeaders()
+    };
+    
+    const req = https.request(options, (res) => {
+        if (res.statusCode !== 200 && res.statusCode !== 204) {
+            console.error(`Discord webhook returned status ${res.statusCode}`);
+        }
+    });
+    
+    req.on('error', (error) => {
+        console.error('Error sending to Discord:', error);
+    });
+    
+    formData.pipe(req);
 }
 
 
@@ -723,15 +751,6 @@ site.use('/privateMiiQRs', async (req, res, next) => {
         next();
     }
 });
-// Image optimization headers
-site.use('/miiImgs', (req, res, next) => {
-    res.set('Cache-Control', 'public, max-age=31536000, immutable');
-    next();
-});
-site.use('/miiQRs', (req, res, next) => {
-    res.set('Cache-Control', 'public, max-age=31536000, immutable');
-    next();
-});
 // Static assets caching
 site.use('/static', express.static(path.join(__dirname, 'static'), {
     maxAge: '7d',
@@ -779,6 +798,9 @@ site.listen(8080, async () => {
     }
     if (!fs.existsSync('./static/privateMiiQRs')) {
         fs.mkdirSync('./static/privateMiiQRs', { recursive: true });
+    }
+    if (!fs.existsSync('./static/temp')) {
+        fs.mkdirSync('./static/temp', { recursive: true });
     }
 
     // Migrate old flat category structure to nested structure
@@ -858,115 +880,115 @@ site.listen(8080, async () => {
     console.log("Migration complete - all official Miis have officialCategories arrays");
 
     // Initialize official categories structure with unlimited nesting
-if (!storage.officialCategories) {
-    storage.officialCategories = {
-        // Structure: { name: string, color: string, children: [...], path: string }
-        categories: [
-            {
-                name: "Games",
-                color: "#ff6b6b",
-                path: "Games",
-                children: [
-                    {
-                        name: "Wii Sports Series",
-                        color: "#ff8787",
-                        path: "Games/Wii Sports Series",
-                        children: [
-                            { name: "Wii Sports", color: "#ffa3a3", path: "Games/Wii Sports Series/Wii Sports", children: [] },
-                            { name: "Wii Sports Resort", color: "#ffa3a3", path: "Games/Wii Sports Series/Wii Sports Resort", children: [] },
-                            { name: "Wii Sports Club", color: "#ffa3a3", path: "Games/Wii Sports Series/Wii Sports Club", children: [] },
-                            { name: "Nintendo Switch Sports", color: "#ffa3a3", path: "Games/Wii Sports Series/Nintendo Switch Sports", children: [] }
-                        ]
-                    },
-                    {
-                        name: "Wii Play Series",
-                        color: "#ff8787",
-                        path: "Games/Wii Play Series",
-                        children: [
-                            { name: "Wii Play", color: "#ffa3a3", path: "Games/Wii Play Series/Wii Play", children: [] },
-                            { name: "Wii Play Motion", color: "#ffa3a3", path: "Games/Wii Play Series/Wii Play Motion", children: [] }
-                        ]
-                    },
-                    {
-                        name: "Wii Fit Series",
-                        color: "#ff8787",
-                        path: "Games/Wii Fit Series",
-                        children: [
-                            { name: "Wii Fit", color: "#ffa3a3", path: "Games/Wii Fit Series/Wii Fit", children: [] },
-                            { name: "Wii Fit Plus", color: "#ffa3a3", path: "Games/Wii Fit Series/Wii Fit Plus", children: [] },
-                            { name: "Wii Fit U", color: "#ffa3a3", path: "Games/Wii Fit Series/Wii Fit U", children: [] }
-                        ]
-                    },
-                    {
-                        name: "Wii Party Series",
-                        color: "#ff8787",
-                        path: "Games/Wii Party Series",
-                        children: [
-                            { name: "Wii Party", color: "#ffa3a3", path: "Games/Wii Party Series/Wii Party", children: [] },
-                            { name: "Wii Party U", color: "#ffa3a3", path: "Games/Wii Party Series/Wii Party U", children: [] }
-                        ]
-                    },
-                    {
-                        name: "Mario Kart Series",
-                        color: "#ff8787",
-                        path: "Games/Mario Kart Series",
-                        children: [
-                            { name: "Mario Kart Wii", color: "#ffa3a3", path: "Games/Mario Kart Series/Mario Kart Wii", children: [] },
-                            { name: "Mario Kart 7", color: "#ffa3a3", path: "Games/Mario Kart Series/Mario Kart 7", children: [] },
-                            { name: "Mario Kart 8", color: "#ffa3a3", path: "Games/Mario Kart Series/Mario Kart 8", children: [] }
-                        ]
-                    },
-                    {
-                        name: "Super Smash Bros. Series",
-                        color: "#ff8787",
-                        path: "Games/Super Smash Bros. Series",
-                        children: [
-                            { name: "Super Smash Bros. for 3DS/Wii U", color: "#ffa3a3", path: "Games/Super Smash Bros. Series/Super Smash Bros. for 3DS/Wii U", children: [] },
-                            { name: "Super Smash Bros. Ultimate", color: "#ffa3a3", path: "Games/Super Smash Bros. Series/Super Smash Bros. Ultimate", children: [] }
-                        ]
-                    },
-                    {
-                        name: "Tomodachi Series",
-                        color: "#ff8787",
-                        path: "Games/Tomodachi Series",
-                        children: [
-                            { name: "Tomodachi Collection", color: "#ffa3a3", path: "Games/Tomodachi Series/Tomodachi Collection", children: [] },
-                            { name: "Tomodachi Life", color: "#ffa3a3", path: "Games/Tomodachi Series/Tomodachi Life", children: [] }
-                        ]
-                    },
-                    { name: "Miitopia", color: "#ff8787", path: "Games/Miitopia", children: [] },
-                    { name: "Wii Music", color: "#ff8787", path: "Games/Wii Music", children: [] },
-                    { name: "Nintendo Land", color: "#ff8787", path: "Games/Nintendo Land", children: [] }
-                ]
-            },
-            {
-                name: "Consoles",
-                color: "#4ecdc4",
-                path: "Consoles",
-                children: [
-                    { name: "Wii", color: "#6ed9d0", path: "Consoles/Wii", children: [] },
-                    { name: "Nintendo DS", color: "#6ed9d0", path: "Consoles/Nintendo DS", children: [] },
-                    { name: "Nintendo 3DS", color: "#6ed9d0", path: "Consoles/Nintendo 3DS", children: [] },
-                    { name: "Wii U", color: "#6ed9d0", path: "Consoles/Wii U", children: [] },
-                    { name: "Nintendo Switch", color: "#6ed9d0", path: "Consoles/Nintendo Switch", children: [] }
-                ]
-            },
-            {
-                name: "Other",
-                color: "#95e1d3",
-                path: "Other",
-                children: [
-                    { name: "Promo Material", color: "#ade8dd", path: "Other/Promo Material", children: [] },
-                    { name: "E3 Demos", color: "#ade8dd", path: "Other/E3 Demos", children: [] },
-                    { name: "Internal/Debug", color: "#ade8dd", path: "Other/Internal/Debug", children: [] },
-                    { name: "System Defaults", color: "#ade8dd", path: "Other/System Defaults", children: [] }
-                ]
-            }
-        ]
-    };
-}
+    if (!storage.officialCategories) {
+        storage.officialCategories = {
+            // Structure: { name: string, color: string, children: [...], path: string }
+            categories: [
+                {
+                    name: "Games",
+                    color: "#ff6b6b",
+                    path: "Games",
+                    children: [
+                        {
+                            name: "Wii Sports Series",
+                            color: "#ff8787",
+                            path: "Games/Wii Sports Series",
+                            children: [
+                                { name: "Wii Sports", color: "#ffa3a3", path: "Games/Wii Sports Series/Wii Sports", children: [] },
+                                { name: "Wii Sports Resort", color: "#ffa3a3", path: "Games/Wii Sports Series/Wii Sports Resort", children: [] },
+                                { name: "Wii Sports Club", color: "#ffa3a3", path: "Games/Wii Sports Series/Wii Sports Club", children: [] },
+                                { name: "Nintendo Switch Sports", color: "#ffa3a3", path: "Games/Wii Sports Series/Nintendo Switch Sports", children: [] }
+                            ]
+                        },
+                        {
+                            name: "Wii Play Series",
+                            color: "#ff8787",
+                            path: "Games/Wii Play Series",
+                            children: [
+                                { name: "Wii Play", color: "#ffa3a3", path: "Games/Wii Play Series/Wii Play", children: [] },
+                                { name: "Wii Play Motion", color: "#ffa3a3", path: "Games/Wii Play Series/Wii Play Motion", children: [] }
+                            ]
+                        },
+                        {
+                            name: "Wii Fit Series",
+                            color: "#ff8787",
+                            path: "Games/Wii Fit Series",
+                            children: [
+                                { name: "Wii Fit", color: "#ffa3a3", path: "Games/Wii Fit Series/Wii Fit", children: [] },
+                                { name: "Wii Fit Plus", color: "#ffa3a3", path: "Games/Wii Fit Series/Wii Fit Plus", children: [] },
+                                { name: "Wii Fit U", color: "#ffa3a3", path: "Games/Wii Fit Series/Wii Fit U", children: [] }
+                            ]
+                        },
+                        {
+                            name: "Wii Party Series",
+                            color: "#ff8787",
+                            path: "Games/Wii Party Series",
+                            children: [
+                                { name: "Wii Party", color: "#ffa3a3", path: "Games/Wii Party Series/Wii Party", children: [] },
+                                { name: "Wii Party U", color: "#ffa3a3", path: "Games/Wii Party Series/Wii Party U", children: [] }
+                            ]
+                        },
+                        {
+                            name: "Mario Kart Series",
+                            color: "#ff8787",
+                            path: "Games/Mario Kart Series",
+                            children: [
+                                { name: "Mario Kart Wii", color: "#ffa3a3", path: "Games/Mario Kart Series/Mario Kart Wii", children: [] },
+                                { name: "Mario Kart 7", color: "#ffa3a3", path: "Games/Mario Kart Series/Mario Kart 7", children: [] },
+                                { name: "Mario Kart 8", color: "#ffa3a3", path: "Games/Mario Kart Series/Mario Kart 8", children: [] }
+                            ]
+                        },
+                        {
+                            name: "Super Smash Bros. Series",
+                            color: "#ff8787",
+                            path: "Games/Super Smash Bros. Series",
+                            children: [
+                                { name: "Super Smash Bros. for 3DS/Wii U", color: "#ffa3a3", path: "Games/Super Smash Bros. Series/Super Smash Bros. for 3DS/Wii U", children: [] },
+                                { name: "Super Smash Bros. Ultimate", color: "#ffa3a3", path: "Games/Super Smash Bros. Series/Super Smash Bros. Ultimate", children: [] }
+                            ]
+                        },
+                        {
+                            name: "Tomodachi Series",
+                            color: "#ff8787",
+                            path: "Games/Tomodachi Series",
+                            children: [
+                                { name: "Tomodachi Collection", color: "#ffa3a3", path: "Games/Tomodachi Series/Tomodachi Collection", children: [] },
+                                { name: "Tomodachi Life", color: "#ffa3a3", path: "Games/Tomodachi Series/Tomodachi Life", children: [] }
+                            ]
+                        },
+                        { name: "Miitopia", color: "#ff8787", path: "Games/Miitopia", children: [] },
+                        { name: "Wii Music", color: "#ff8787", path: "Games/Wii Music", children: [] },
+                        { name: "Nintendo Land", color: "#ff8787", path: "Games/Nintendo Land", children: [] }
+                    ]
+                },
+                {
+                    name: "Consoles",
+                    color: "#4ecdc4",
+                    path: "Consoles",
+                    children: [
+                        { name: "Wii", color: "#6ed9d0", path: "Consoles/Wii", children: [] },
+                        { name: "Nintendo DS", color: "#6ed9d0", path: "Consoles/Nintendo DS", children: [] },
+                        { name: "Nintendo 3DS", color: "#6ed9d0", path: "Consoles/Nintendo 3DS", children: [] },
+                        { name: "Wii U", color: "#6ed9d0", path: "Consoles/Wii U", children: [] },
+                        { name: "Nintendo Switch", color: "#6ed9d0", path: "Consoles/Nintendo Switch", children: [] }
+                    ]
+                },
+                {
+                    name: "Other",
+                    color: "#95e1d3",
+                    path: "Other",
+                    children: [
+                        { name: "Promo Material", color: "#ade8dd", path: "Other/Promo Material", children: [] },
+                        { name: "E3 Demos", color: "#ade8dd", path: "Other/E3 Demos", children: [] },
+                        { name: "Internal/Debug", color: "#ade8dd", path: "Other/Internal/Debug", children: [] },
+                        { name: "System Defaults", color: "#ade8dd", path: "Other/System Defaults", children: [] }
+                    ]
+                }
+            ]
+        };
+    }
 
-console.log("Official categories initialized with nested structure");
+    console.log("Official categories initialized with nested structure");
     
     // Ensure privateMiis array for all users
     Object.keys(storage.users).forEach(username => {
@@ -1008,7 +1030,7 @@ console.log("Official categories initialized with nested structure");
             mii.desc = "Uploaded in Bulk";
             
             storage.miis[mii.id] = mii;
-            storage.miiIds.push(mii.id);
+            Object.keys(storage.miis).push(mii.id);
             (storage.users[mii.uploader] ??= { submissions: [] }).submissions.push(mii.id);
             
             fs.unlinkSync(`./quickUploads/${file}`);
@@ -1039,14 +1061,13 @@ console.log("Official categories initialized with nested structure");
         Object.keys(storage.miis).map(async (miiKey) => {
             const mii = storage.miis[miiKey];
             
-            if (!fs.existsSync(`./static/miiImgs/${mii.id}.jpg`)) {
-                fs.writeFileSync(`./static/miiImgs/${mii.id}.jpg`, await miijs.renderMii(mii));
+            if (!fs.existsSync(`./static/miiImgs/${mii.id}.png`)) {
+                fs.writeFileSync(`./static/miiImgs/${mii.id}.png`, await miijs.renderMii(mii));
                 console.log(`Making image for ${mii.id}`);
             }
             
-            if (!fs.existsSync(`./static/miiQRs/${mii.id}.jpg`)) {
-                // If write3DSQR is async in your lib, add `await` here.
-                miijs.write3DSQR(mii, `./static/miiQRs/${mii.id}.jpg`);
+            if (!fs.existsSync(`./static/miiQRs/${mii.id}.png`)) {
+                miijs.write3DSQR(mii, `./static/miiQRs/${mii.id}.png`);
                 console.log(`Making QR for ${mii.id}`);
             }
         })
@@ -1054,8 +1075,8 @@ console.log("Official categories initialized with nested structure");
     console.log(`Ensured All Miis Have QRs And Face Renders\nGenerating new average Mii...`);
     getAverageMii();
     setInterval(getAverageMii,1800000);//30 Mins, should be adjusted for actual need - if the site gets big, every time a Mii is made will be too frequent, but 30 mins will be too long. If the site remains small, 30 mins will be far too frequent.
-    fs.writeFileSync(`./static/miiImgs/average.jpg`, await miijs.renderMii(storage.miis.average));
-    await miijs.write3DSQR(storage.miis.average, `./static/miiQRs/average.jpg`);
+    fs.writeFileSync(`./static/miiImgs/average.png`, await miijs.renderMii(storage.miis.average));
+    await miijs.write3DSQR(storage.miis.average, `./static/miiQRs/average.png`);
     save();
     console.log(`All setup finished.\nOnline`);
 });
@@ -1212,7 +1233,32 @@ site.get('/transferInstructions', async (req, res) => {
     });
 });
 site.get('/upload', async (req, res) => {
-    ejs.renderFile('./ejsFiles/upload.ejs', await getSendables(req), {}, function(err, str) {
+    let toSend = await getSendables(req);
+    toSend.fromAmiibo=req.query?.fromAmiibo;
+    // Check if coming from Amiibo extraction
+    if (req.query.fromAmiibo) {
+        const tempMiiId = req.query.fromAmiibo;
+        const tempImgPath = `./static/miiImgs/${tempMiiId}.png`;
+        const tempBinPath = `./static/temp/${tempMiiId}.bin`;
+        
+        if (fs.existsSync(tempImgPath) && fs.existsSync(tempBinPath)) {
+            // Read the Mii data
+            try {
+                const binData = fs.readFileSync(tempBinPath);
+                const mii = await miijs.read3DSQR(binData, false);
+                
+                toSend.fromAmiibo = {
+                    id: tempMiiId,
+                    name: mii.meta?.name || "Unknown",
+                    creator: mii.meta?.creatorName || "Unknown"
+                };
+            } catch (e) {
+                console.error('Error reading temp Amiibo Mii:', e);
+            }
+        }
+    }
+    
+    ejs.renderFile('./ejsFiles/upload.ejs', toSend, {}, function(err, str) {
         if (err) {
             res.send(err);
             console.log(err);
@@ -1268,6 +1314,23 @@ site.get('/deleteMii', async (req, res) => {
                 var mii = storage.miis[miiId];
                 storage.users[mii.uploader].submissions.splice(storage.users[mii.uploader].submissions.indexOf(mii.id), 1);
                 var d = new Date();
+                let miiImageData;
+                try {
+                    miiImageData = fs.readFileSync(`./static/miiImgs/${mii.id}.png`);
+                } catch(e) {
+                    try {
+                        miiImageData = fs.readFileSync(`./static/miiImgs/${mii.id}.png`);
+                    } catch(e2) {
+                        miiImageData = null;
+                    }
+                }
+
+                const attachments = miiImageData ? [{
+                    data: miiImageData,
+                    filename: `${mii.id}.png`,
+                    contentType: 'image/png'
+                }] : [];
+
                 makeReport(JSON.stringify({
                     embeds: [{
                         "type": "rich",
@@ -1282,7 +1345,7 @@ site.get('/deleteMii', async (req, res) => {
                             },
                             {
                                 "name": `${mii.official ? "Uploaded" : "Made"} by`,
-                                "value": `[${mii.uploader}](https://miis.kestron.com/user/${mii.uploader})`,
+                                "value": `[${mii.uploader}](https://infinimii.com/user/${mii.uploader})`,
                                 "inline": true
                             },
                             {
@@ -1291,20 +1354,20 @@ site.get('/deleteMii', async (req, res) => {
                                 "inline": true
                             }
                         ],
-                        "thumbnail": {
-                            "url": `https://miis.kestron.com/miiImgs/${mii.id}.jpg`,
-                            "height": 0,
-                            "width": 0
-                        },
+                        ...(miiImageData ? {
+                            "image": {
+                                "url": `attachment://${mii.id}.png`
+                            }
+                        } : {}),
                         "footer": {
                             "text": `Deleted at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
                         }
                     }]
-                }));
-                storage.miiIds.splice(storage.miiIds.indexOf(miiId), 1);
+                }), attachments);
+                Object.keys(storage.miis).splice(Object.keys(storage.miis).indexOf(miiId), 1);
                 delete storage.miis[miiId];
-                try { fs.unlinkSync("./static/miiImgs/" + miiId + ".jpg"); } catch(e) {}
-                try { fs.unlinkSync("./static/miiQRs/" + miiId + ".jpg"); } catch(e) {}
+                try { fs.unlinkSync("./static/miiImgs/" + miiId + ".png"); } catch(e) {}
+                try { fs.unlinkSync("./static/miiQRs/" + miiId + ".png"); } catch(e) {}
                 res.send("{'okay':true}");
                 save();
             }
@@ -1325,6 +1388,23 @@ site.get('/deleteMii', async (req, res) => {
                 }
                 
                 var d = new Date();
+                let miiImageData;
+                try {
+                    miiImageData = fs.readFileSync(`./static/privateMiiImgs/${miiId}.png`);
+                } catch(e) {
+                    try {
+                        miiImageData = fs.readFileSync(`./static/privateMiiImgs/${miiId}.png`);
+                    } catch(e2) {
+                        miiImageData = null;
+                    }
+                }
+
+                const attachments = miiImageData ? [{
+                    data: miiImageData,
+                    filename: `${miiId}.png`,
+                    contentType: 'image/png'
+                }] : [];
+
                 makeReport(JSON.stringify({
                     embeds: [{
                         "type": "rich",
@@ -1339,20 +1419,25 @@ site.get('/deleteMii', async (req, res) => {
                             },
                             {
                                 "name": `Uploaded by`,
-                                "value": `[${mii.uploader}](https://miis.kestron.com/user/${mii.uploader})`,
+                                "value": `[${mii.uploader}](https://infinimii.com/user/${mii.uploader})`,
                                 "inline": true
                             }
                         ],
+                        ...(miiImageData ? {
+                            "image": {
+                                "url": `attachment://${miiId}.png`
+                            }
+                        } : {}),
                         "footer": {
                             "text": `Deleted at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
                         }
                     }]
-                }));
+                }), attachments);
                 
                 delete storage.privateMiis[miiId];
-                try { fs.unlinkSync("./static/privateMiiImgs/" + miiId + ".jpg"); } catch(e) {}
                 try { fs.unlinkSync("./static/privateMiiImgs/" + miiId + ".png"); } catch(e) {}
-                try { fs.unlinkSync("./static/privateMiiQRs/" + miiId + ".jpg"); } catch(e) {}
+                try { fs.unlinkSync("./static/privateMiiImgs/" + miiId + ".png"); } catch(e) {}
+                try { fs.unlinkSync("./static/privateMiiQRs/" + miiId + ".png"); } catch(e) {}
                 try { fs.unlinkSync("./static/privateMiiQRs/" + miiId + ".png"); } catch(e) {}
                 res.send("{'okay':true}");
                 save();
@@ -1451,7 +1536,7 @@ site.post('/updateMiiField', async (req, res) => {
                 fields: [
                     {
                         name: 'Mii',
-                        value: `[${mii.meta.name}](https://miis.kestron.com/mii/${id})`,
+                        value: `[${mii.meta.name}](https://infinimii.com/mii/${id})`,
                         inline: true
                     },
                     {
@@ -1471,7 +1556,7 @@ site.post('/updateMiiField', async (req, res) => {
                     }
                 ],
                 thumbnail: {
-                    url: `https://miis.kestron.com/miiImgs/${id}.jpg`
+                    url: `https://infinimii.com/miiImgs/${id}.png`
                 }
             }]
         }));
@@ -1506,7 +1591,7 @@ site.get('/regenerateQR', async (req, res) => {
         }
 
         // Regenerate the QR code
-        await miijs.write3DSQR(mii, `./static/miiQRs/${id}.jpg`);
+        await miijs.write3DSQR(mii, `./static/miiQRs/${id}.png`);
 
         // Log to Discord
         makeReport(JSON.stringify({
@@ -1518,12 +1603,12 @@ site.get('/regenerateQR', async (req, res) => {
                 fields: [
                     {
                         name: 'Mii',
-                        value: `[${mii.meta.name}](https://miis.kestron.com/mii/${id})`,
+                        value: `[${mii.meta.name}](https://infinimii.com/mii/${id})`,
                         inline: true
                     }
                 ],
                 thumbnail: {
-                    url: `https://miis.kestron.com/miiImgs/${id}.jpg`
+                    url: `https://infinimii.com/miiImgs/${id}.png`
                 }
             }]
         }));
@@ -1767,12 +1852,12 @@ site.post('/permBanUser', async (req, res) => {
                 const mii = storage.miis[miiId];
                 if (mii) {
                     // Remove from miiIds
-                    const index = storage.miiIds.indexOf(miiId);
-                    if (index > -1) storage.miiIds.splice(index, 1);
+                    const index = Object.keys(storage.miis).indexOf(miiId);
+                    if (index > -1) Object.keys(storage.miis).splice(index, 1);
                     
                     // Delete files
-                    try { fs.unlinkSync(`./static/miiImgs/${miiId}.jpg`); } catch(e) {}
-                    try { fs.unlinkSync(`./static/miiQRs/${miiId}.jpg`); } catch(e) {}
+                    try { fs.unlinkSync(`./static/miiImgs/${miiId}.png`); } catch(e) {}
+                    try { fs.unlinkSync(`./static/miiQRs/${miiId}.png`); } catch(e) {}
                     
                     // Delete Mii data
                     delete storage.miis[miiId];
@@ -1857,12 +1942,12 @@ site.post('/deleteAllUserMiis', async (req, res) => {
                 const mii = storage.miis[miiId];
                 if (mii) {
                     // Remove from miiIds
-                    const index = storage.miiIds.indexOf(miiId);
-                    if (index > -1) storage.miiIds.splice(index, 1);
+                    const index = Object.keys(storage.miis).indexOf(miiId);
+                    if (index > -1) Object.keys(storage.miis).splice(index, 1);
                     
                     // Delete files
-                    try { fs.unlinkSync(`./static/miiImgs/${miiId}.jpg`); } catch(e) {}
-                    try { fs.unlinkSync(`./static/miiQRs/${miiId}.jpg`); } catch(e) {}
+                    try { fs.unlinkSync(`./static/miiImgs/${miiId}.png`); } catch(e) {}
+                    try { fs.unlinkSync(`./static/miiQRs/${miiId}.png`); } catch(e) {}
                     
                     // Delete Mii data
                     delete storage.miis[miiId];
@@ -2021,7 +2106,7 @@ site.post('/toggleMiiOfficial', async (req, res) => {
                 fields: [
                     {
                         name: 'Mii',
-                        value: `[${mii.meta.name}](https://miis.kestron.com/mii/${id})`,
+                        value: `[${mii.meta.name}](https://infinimii.com/mii/${id})`,
                         inline: true
                     },
                     {
@@ -2036,7 +2121,7 @@ site.post('/toggleMiiOfficial', async (req, res) => {
                     }
                 ],
                 thumbnail: {
-                    url: `https://miis.kestron.com/miiImgs/${id}.jpg`
+                    url: `https://infinimii.com/miiImgs/${id}.png`
                 }
             }]
         }));
@@ -2050,8 +2135,6 @@ site.post('/toggleMiiOfficial', async (req, res) => {
 
 // Main sitemap endpoint
 site.get('/sitemap.xml', async (req, res) => {
-    const baseUrl = 'https://yourdomain.com'; // Replace with your actual domain
-    
     const urls = [
         {
             loc: baseUrl + '/',
@@ -2112,7 +2195,6 @@ site.get('/sitemap.xml', async (req, res) => {
 
 // Mii-specific sitemap (separate for better organization)
 site.get('/sitemap-miis.xml', async (req, res) => {
-    const baseUrl = 'https://yourdomain.com';
     const urls = [];
     
     // Add all published Miis
@@ -2127,12 +2209,12 @@ site.get('/sitemap-miis.xml', async (req, res) => {
             priority: mii.official ? '0.9' : '0.7',
             images: [
                 {
-                    loc: `${baseUrl}/miiImgs/${miiId}.jpg`,
+                    loc: `${baseUrl}/miiImgs/${miiId}.png`,
                     title: `${mii.meta.name} - Mii Character`,
                     caption: mii.desc || `${mii.meta.name} Mii character for Nintendo systems`
                 },
                 {
-                    loc: `${baseUrl}/miiQRs/${miiId}.jpg`,
+                    loc: `${baseUrl}/miiQRs/${miiId}.png`,
                     title: `${mii.meta.name} - QR Code`,
                     caption: `QR Code for ${mii.meta.name} - Scan with 3DS, Wii U, Tomodachi Life, or Miitomo`
                 }
@@ -2146,7 +2228,6 @@ site.get('/sitemap-miis.xml', async (req, res) => {
 
 // User profiles sitemap
 site.get('/sitemap-users.xml', async (req, res) => {
-    const baseUrl = 'https://yourdomain.com';
     const urls = [];
     
     Object.keys(storage.users).forEach(username => {
@@ -2165,7 +2246,6 @@ site.get('/sitemap-users.xml', async (req, res) => {
 
 // Sitemap index
 site.get('/sitemap-index.xml', async (req, res) => {
-    const baseUrl = 'https://yourdomain.com';
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
     xml += '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
     
@@ -2203,6 +2283,7 @@ site.get('/amiibo', async (req, res) => {
 });
 
 // Extract Mii from Amiibo
+// Extract Mii from Amiibo
 site.post('/extractMiiFromAmiibo', upload.single('amiibo'), async (req, res) => {
     try {
         if (!req.file) {
@@ -2217,19 +2298,24 @@ site.post('/extractMiiFromAmiibo', upload.single('amiibo'), async (req, res) => 
         const miiData = miijs.extractMiiFromAmiibo(amiiboDump);
         
         // Convert to JSON - miiData is already decrypted 3DS format
-        const mii = await miijs.read3DSQR(miiData, false);
+        const mii = await miijs.read3DSQR(miiData);
         
         // Generate ID and save temporarily
-        mii.id = genId();
+        const tempId = genId();
+        mii.id = tempId;
         mii.uploadedOn = Date.now();
-        mii.uploader = "temp_" + mii.id;
+        mii.uploader = "temp_" + tempId;
         mii.desc = "Extracted from Amiibo";
         mii.votes = 0;
         mii.official = false;
         
-        // Render images
-        await miijs.renderMii(mii, "./static/miiImgs/" + mii.id + ".png");
-        await miijs.write3DSQR(mii, "./static/miiQRs/" + mii.id + ".png");
+        // Render images with FFL - save to temp location
+        const miiImage = await miijs.renderMii(mii);
+        fs.writeFileSync("./static/miiImgs/" + tempId + ".png", miiImage);
+        await miijs.write3DSQR(mii, "./static/miiQRs/" + tempId + ".png");
+        
+        // Also save the decrypted bin data for upload
+        fs.writeFileSync("./static/temp/" + tempId + ".bin", miiData);
         
         // Clean up upload
         try { fs.unlinkSync("./uploads/" + req.file.filename); } catch (e) { }
@@ -2242,6 +2328,7 @@ site.post('/extractMiiFromAmiibo', upload.single('amiibo'), async (req, res) => 
     }
 });
 
+// Insert Mii into Amiibo
 // Insert Mii into Amiibo
 site.post('/insertMiiIntoAmiibo', upload.fields([
     { name: 'amiibo', maxCount: 1 },
@@ -2283,25 +2370,70 @@ site.post('/insertMiiIntoAmiibo', upload.fields([
                 mii = await miijs.read3DSQR(binData, false);
             }
             
-            // Get decrypted binary data
-            miiData = await miijs.read3DSQR(req.files.mii[0].path, true);
+            // Get decrypted binary data (92 bytes)
+            // We need to convert the Mii back to binary format
+            const tempQrPath = "./static/temp/" + genId() + ".png";
+            await miijs.write3DSQR(mii, tempQrPath);
+            miiData = await miijs.read3DSQR(tempQrPath, true);
+            try { fs.unlinkSync(tempQrPath); } catch (e) { }
             
             try { fs.unlinkSync(req.files.mii[0].path); } catch (e) { }
             
         }
         else if (source === 'miiId') {
             const miiId = req.body.miiId;
-            if (!storage.miis[miiId]) {
-                res.json({ okay: false, error: 'Invalid Mii ID' });
+            
+            if (!miiId || !miiId.trim()) {
+                res.json({ okay: false, error: 'No Mii ID provided' });
                 try { fs.unlinkSync(req.files.amiibo[0].path); } catch (e) { }
                 return;
             }
             
-            const mii = storage.miis[miiId];
-            // Convert to decrypted binary
-            const qrPath = "./static/miiQRs/" + miiId + ".png";
-            miiData = await miijs.read3DSQR(qrPath, true);
+            let mii = null;
             
+            // Check published Miis first
+            if (storage.miis[miiId]) {
+                mii = storage.miis[miiId];
+            }
+            // Check private Miis
+            else if (storage.privateMiis && storage.privateMiis[miiId]) {
+                const privateMii = storage.privateMiis[miiId];
+                const user = storage.users[req.cookies.username];
+                const isModerator = user && canModerate(user);
+                const isOwner = privateMii.uploader === req.cookies.username;
+                
+                if (!isOwner && !isModerator) {
+                    res.json({ okay: false, error: 'You do not have permission to use this private Mii' });
+                    try { fs.unlinkSync(req.files.amiibo[0].path); } catch (e) { }
+                    return;
+                }
+                
+                mii = privateMii;
+            }
+            else {
+                res.json({ okay: false, error: 'Invalid Mii ID - Mii not found' });
+                try { fs.unlinkSync(req.files.amiibo[0].path); } catch (e) { }
+                return;
+            }
+            
+            // Convert Mii to 3DS format if needed
+            if (mii.console?.toLowerCase() !== "3ds" && mii.console?.toLowerCase() !== "wii u") {
+                mii = miijs.convertMii(mii, "3ds");
+            }
+            
+            // Generate temporary QR and extract binary
+            const tempPath = `./static/temp/${genId()}.png`;
+            try {
+                await miijs.write3DSQR(mii, tempPath);
+                miiData = await miijs.read3DSQR(tempPath, true);
+                fs.unlinkSync(tempPath);
+            } catch (e) {
+                console.error('Error converting Mii to binary:', e);
+                res.json({ okay: false, error: 'Failed to convert Mii data: ' + e.message });
+                try { fs.unlinkSync(req.files.amiibo[0].path); } catch (e2) { }
+                try { fs.unlinkSync(tempPath); } catch (e2) { }
+                return;
+            }
         }
         else if (source === 'studio') {
             let studioCode = req.body.studioCode.trim();
@@ -2321,6 +2453,27 @@ site.post('/insertMiiIntoAmiibo', upload.fields([
             miiData = await miijs.read3DSQR(tempPath, true);
             try { fs.unlinkSync(tempPath); } catch (e) { }
         }
+        else {
+            res.json({ okay: false, error: 'Invalid Mii source' });
+            try { fs.unlinkSync(req.files.amiibo[0].path); } catch (e) { }
+            return;
+        }
+        
+        // Ensure miiData is a Buffer
+        if (!(miiData instanceof Buffer)) {
+            if (miiData instanceof Uint8Array) {
+                miiData = Buffer.from(miiData);
+            } else {
+                throw new Error('Mii data is not in the correct format');
+            }
+        }
+        
+        // Validate miiData length (should be 92 bytes for decrypted 3DS Mii)
+        if (miiData.length !== 92) {
+            throw new Error(`Invalid Mii data length: ${miiData.length} bytes (expected 92)`);
+        }
+        
+        console.log('Inserting Mii data:', miiData.length, 'bytes');
         
         // Insert Mii into Amiibo
         const modifiedAmiibo = miijs.insertMiiIntoAmiibo(amiiboDump, miiData);
@@ -2342,7 +2495,114 @@ site.post('/insertMiiIntoAmiibo', upload.fields([
         res.json({ okay: false, error: 'Failed to insert Mii into Amiibo: ' + e.message });
     }
 });
+// Upload extracted Amiibo Mii
+site.post('/uploadExtractedAmiibo', async (req, res) => {
+    try {
+        const username = req.cookies.username;
+        
+        // Check authentication
+        if (!username || !validatePassword(req.cookies.token, storage.users[username].salt, storage.users[username].token)) {
+            res.send("{'error':'Please log in to upload Miis'}");
+            return;
+        }
+        
+        const user = storage.users[username];
+        const tempMiiId = req.body.miiId;
+        
+        // Check private Mii limit
+        if (!user.privateMiis) user.privateMiis = [];
+        if (user.privateMiis.length >= PRIVATE_MII_LIMIT) {
+            res.send(`{'error':'You have reached the limit of ${PRIVATE_MII_LIMIT} private Miis. Please publish or delete some before uploading more.'}`);
+            return;
+        }
+        
+        // Check if temporary files exist
+        const tempImgPath = `./static/miiImgs/${tempMiiId}.png`;
+        const tempQrPath = `./static/miiQRs/${tempMiiId}.png`;
+        
+        if (!fs.existsSync(tempImgPath) || !fs.existsSync(tempQrPath)) {
+            res.send("{'error':'Extracted Mii data not found. Please extract again.'}");
+            return;
+        }
+        
+        // Generate new ID for the actual upload
+        const newMiiId = genId();
+        
+        // Move files from temp location to private folders
+        fs.renameSync(tempImgPath, `./static/privateMiiImgs/${newMiiId}.png`);
+        fs.renameSync(tempQrPath, `./static/privateMiiQRs/${newMiiId}.png`);
+        
+        // Create the Mii object (we need to reconstruct it from the QR)
+        const mii = await miijs.read3DSQR(`./static/privateMiiQRs/${newMiiId}.png`);
+        mii.id = newMiiId;
+        mii.uploadedOn = Date.now();
+        mii.uploader = username;
+        mii.desc = "Extracted from Amiibo";
+        mii.votes = 1;
+        mii.official = false;
+        mii.published = false;
+        mii.blockedFromPublishing = false;
+        
+        // Add to user's private Miis
+        user.privateMiis.push(newMiiId);
+        
+        // Store in private miis object
+        if (!storage.privateMiis) storage.privateMiis = {};
+        storage.privateMiis[newMiiId] = mii;
+        
+        save();
+        
+        // Send to Discord for moderator review
+        var d = new Date();
+        const miiImagePath = `./static/privateMiiImgs/${newMiiId}.png`;
+        const miiImageData = fs.readFileSync(miiImagePath);
 
+        makeReport(JSON.stringify({
+            embeds: [{
+                "type": "rich",
+                "title": `Private Mii Uploaded (Extracted from Amiibo)`,
+                "description": mii.desc,
+                "color": 0x00aaff,
+                "fields": [
+                    {
+                        "name": `Mii Name`,
+                        "value": mii.meta?.name || mii.name || "Unknown",
+                        "inline": true
+                    },
+                    {
+                        "name": `Uploaded by`,
+                        "value": `[${username}](https://miis.kestron.com/user/${username})`,
+                        "inline": true
+                    },
+                    {
+                        "name": `Mii Creator Name`,
+                        "value": mii.meta?.creatorName || mii.creatorName || "Unknown",
+                        "inline": true
+                    }
+                ],
+                "image": {
+                    "url": `attachment://${newMiiId}.png`
+                },
+                "footer": {
+                    "text": `View: https://miis.kestron.com/mii/${newMiiId} | Uploaded at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
+                }
+            }]
+        }), [
+            {
+                data: miiImageData,
+                filename: `${newMiiId}.png`,
+                contentType: 'image/png'
+            }
+        ]);
+        
+        // Redirect to private Miis page
+        res.redirect("/myPrivateMiis");
+        
+    } catch (e) {
+        console.error('Error uploading extracted Amiibo Mii:', e);
+        res.send("{'error':'Server error: " + e.message + "'}");
+    }
+});
 // ========== STUDIO ENDPOINTS ==========
 
 // Upload Mii from Studio code
@@ -2356,7 +2616,14 @@ site.post('/uploadStudioMii', async (req, res) => {
         
         const user = storage.users[uploader];
         
-        // Check official Mii permissions
+        // Check private Mii limit
+        if (!user.privateMiis) user.privateMiis = [];
+        if (user.privateMiis.length >= PRIVATE_MII_LIMIT) {
+            res.send(`{'okay':false,'error':'You have reached the limit of ${PRIVATE_MII_LIMIT} private Miis. Please publish or delete some before uploading more.'}`);
+            return;
+        }
+        
+        // Check if trying to upload official Mii without permission
         if (req.body.official && !canUploadOfficial(user)) {
             res.send("{'error':'Only Researchers and Administrators can upload official Miis'}");
             return;
@@ -2387,37 +2654,75 @@ site.post('/uploadStudioMii', async (req, res) => {
         mii.desc = req.body.desc || "";
         mii.votes = 1;
         mii.official = req.body.official || false;
+        mii.published = false;
+        mii.blockedFromPublishing = false;
         
-        // Render images
-        await miijs.renderMii(mii, "./static/miiImgs/" + mii.id + ".png");
-        await miijs.write3DSQR(mii, "./static/miiQRs/" + mii.id + ".png");
+        // Add official Mii categorization
+        if (req.body.official) {
+            mii.officialCategories = [];
+            
+            // Parse categories (now stores paths instead of names)
+            if (req.body.categories) {
+                const categories = Array.isArray(req.body.categories) ? req.body.categories : [req.body.categories];
+                mii.officialCategories = [...new Set(categories.filter(c => c && c.trim()))];
+            }
+        }
         
-        // Save to storage
-        storage.miis[mii.id] = mii;
-        storage.miiIds.push(mii.id);
-        storage.users[mii.uploader].submissions.push(mii.id);
+        // Render images using LOCAL FFL, not Studio
+        const miiImageData = await miijs.renderMii(mii);
+        fs.writeFileSync("./static/privateMiiImgs/" + mii.id + ".png", miiImageData);
+        await miijs.write3DSQR(mii, "./static/privateMiiQRs/" + mii.id + ".png");
+        
+        // Add to user's private Miis
+        user.privateMiis.push(mii.id);
+        
+        // Store in a separate private miis object
+        if (!storage.privateMiis) storage.privateMiis = {};
+        storage.privateMiis[mii.id] = mii;
+        
         save();
         
-        // Report to Discord
+        // Send to Discord for moderator review
         var d = new Date();
         makeReport(JSON.stringify({
             embeds: [{
                 "type": "rich",
-                "title": (req.body.official ? "Official " : "") + "Mii Uploaded from Studio",
-                "description": "**" + mii.meta.name + "** uploaded by **" + uploader + "**",
-                "color": 0x25d366,
-                "thumbnail": {
-                    "url": "https://infinimii.kestron.com/miiImgs/" + mii.id + ".png",
-                    "height": 0,
-                    "width": 0
+                "title": (req.body.official ? "Official " : "") + `Private Mii Uploaded from Studio`,
+                "description": mii.desc,
+                "color": 0x00aaff,
+                "fields": [
+                    {
+                        "name": `Mii Name`,
+                        "value": mii.meta?.name || mii.name || "Unknown",
+                        "inline": true
+                    },
+                    {
+                        "name": `Uploaded by`,
+                        "value": `[${uploader}](https://infinimii.com/user/${uploader})`,
+                        "inline": true
+                    },
+                    {
+                        "name": `Mii Creator Name`,
+                        "value": mii.meta?.creatorName || mii.creatorName || "Unknown",
+                        "inline": true
+                    }
+                ],
+                "image": {
+                    "url": `attachment://${mii.id}.png`
                 },
                 "footer": {
-                    "text": d.toDateString() + " " + d.toTimeString()
+                    "text": `View: https://infinimii.com/mii/${mii.id} | Uploaded at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
                 }
             }]
-        }));
+        }), [
+            {
+                data: miiImageData,
+                filename: `${mii.id}.png`,
+                contentType: 'image/png'
+            }
+        ]);
         
-        setTimeout(() => { res.redirect("/mii/" + mii.id) }, 2000);
+        setTimeout(() => { res.redirect("/myPrivateMiis") }, 2000);
         
     } catch (e) {
         console.error('Error uploading Studio Mii:', e);
@@ -2581,7 +2886,7 @@ site.post('/changeUserPfp', async (req, res) => {
                     }
                 ],
                 thumbnail: {
-                    url: `https://miis.kestron.com/miiImgs/${miiId}.jpg`
+                    url: `https://infinimii.com/miiImgs/${miiId}.png`
                 }
             }]
         }));
@@ -2848,7 +3153,7 @@ site.get('/changePfp', async (req, res) => {
         res.send(`{"okay":false,"msg":"Invalid account"}`);
         return;
     }
-    if (req.query.id?.length > 0 && storage.miiIds.includes(req.query.id)) {
+    if (req.query.id?.length > 0 && Object.keys(storage.miis).includes(req.query.id)) {
         storage.users[req.cookies.username].miiPfp = req.query.id;
         res.send(`{"okay":true}`);
         save();
@@ -2876,14 +3181,14 @@ site.get('/changeUser', async (req, res) => {
                 "description": `${req.cookies.username} is now ${req.query.newUser}`,
                 "color": 0xff0000,
                 "thumbnail": {
-                    "url": `https://miis.kestron.com/miiImgs/${storage.users[req.query.newUser].miiPfp}.jpg`,
+                    "url": `https://infinimii.com/miiImgs/${storage.users[req.query.newUser].miiPfp}.png`,
                     "height": 0,
                     "width": 0
                 },
                 "footer": {
                     "text": `Changed at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
                 },
-                "url": `https://miis.kestron.com/user/${req.query.newUser}`
+                "url": `https://infinimii.com/user/${req.query.newUser}`
             }]
         }));
         save();
@@ -2894,16 +3199,33 @@ site.get('/changeUser', async (req, res) => {
         res.send(`{"okay":false,"msg":"Username invalid"}`);
     }
 });
-site.get('/changehighlightedMii', async (req, res) => {
+site.get('/changeHighlightedMii', async (req, res) => {
     if (!validatePassword(req.cookies.token, storage.users[req.cookies.username].salt, storage.users[req.cookies.username].token) || !storage.users[req.cookies.username].roles.includes('moderator')) {
         res.send(`{"okay":false,"msg":"Invalid account"}`);
         return;
     }
-    if (req.query.id?.length > 0 && storage.miiIds.includes(req.query.id)) {
+    if (req.query.id?.length > 0 && Object.keys(storage.miis).includes(req.query.id)) {
         storage.highlightedMii = req.query.id;
         res.send(`{"okay":true}`);
         var mii = storage.miis[storage.highlightedMii];
         storage.highlightedMiiChangeDay = new Date().getDate();
+        let miiImageData;
+        try {
+            miiImageData = fs.readFileSync(`./static/miiImgs/${mii.id}.png`);
+        } catch(e) {
+            try {
+                miiImageData = fs.readFileSync(`./static/miiImgs/${mii.id}.png`);
+            } catch(e2) {
+                miiImageData = null;
+            }
+        }
+
+        const attachments = miiImageData ? [{
+            data: miiImageData,
+            filename: `${mii.id}.png`,
+            contentType: 'image/png'
+        }] : [];
+
         makeReport(JSON.stringify({
             embeds: [{
                 "type": "rich",
@@ -2918,7 +3240,7 @@ site.get('/changehighlightedMii', async (req, res) => {
                     },
                     {
                         "name": `Uploaded by`,
-                        "value": `[${mii.uploader}](https://miis.kestron.com/user/${mii.uploader})`,
+                        "value": `[${mii.uploader}](https://infinimii.com/user/${mii.uploader})`,
                         "inline": true
                     },
                     {
@@ -2927,17 +3249,17 @@ site.get('/changehighlightedMii', async (req, res) => {
                         "inline": true
                     }
                 ],
-                "thumbnail": {
-                    "url": `https://miis.kestron.com/miiImgs/${mii.id}.jpg`,
-                    "height": 0,
-                    "width": 0
-                },
+                ...(miiImageData ? {
+                    "image": {
+                        "url": `attachment://${mii.id}.png`
+                    }
+                } : {}),
                 "footer": {
                     "text": `New Highlighted Mii set by ${req.cookies.username}`
                 },
-                "url": `https://miis.kestron.com/mii/` + mii.id
+                "url": `https://infinimii.com/mii/` + mii.id
             }]
-        }));
+        }), attachments);
         save();
     }
     else {
@@ -2965,7 +3287,7 @@ site.get('/reportMii',(req,res)=>{
                 },
                 {
                     "name": `Uploaded by`,
-                    "value": `[${mii.uploader}](https://miis.kestron.com/user/${mii.uploader})`,
+                    "value": `[${mii.uploader}](https://infinimii.com/user/${mii.uploader})`,
                     "inline": true
                 },
                 {
@@ -2975,14 +3297,14 @@ site.get('/reportMii',(req,res)=>{
                 }
             ],
             "thumbnail": {
-                "url": `https://miis.kestron.com/miiImgs/${mii.id}.jpg`,
+                "url": `https://infinimii.com/miiImgs/${mii.id}.png`,
                 "height": 0,
                 "width": 0
             },
             "footer": {
                 "text": `Mii has been reported by ${req.cookies.username?req.cookies.username:"Anonymous"}`
             },
-            "url": `https://miis.kestron.com/mii/` + mii.id
+            "url": `https://infinimii.com/mii/` + mii.id
         }]
     }));
     res.send(`{"okay":true}`);
@@ -3044,7 +3366,7 @@ site.post('/changeEmail', async (req, res) => {
         user.email = newEmail;
         user.verified=false;
         var token = genToken();
-        let link = "https://miis.kestron.com/verify?user=" + encodeURIComponent(req.body.username) + "&token=" + encodeURIComponent(token);
+        let link = "https://infinimii.com/verify?user=" + encodeURIComponent(req.body.username) + "&token=" + encodeURIComponent(token);
         user.verificationToken=hashPassword(token, hashed.salt).hash;
         save();
 
@@ -3151,12 +3473,12 @@ site.post('/deleteAllMyMiis', async (req, res) => {
                 const mii = storage.miis[miiId];
                 if (mii) {
                     // Remove from miiIds
-                    const index = storage.miiIds.indexOf(miiId);
-                    if (index > -1) storage.miiIds.splice(index, 1);
+                    const index = Object.keys(storage.miis).indexOf(miiId);
+                    if (index > -1) Object.keys(storage.miis).splice(index, 1);
                     
                     // Delete files
-                    try { fs.unlinkSync(`./static/miiImgs/${miiId}.jpg`); } catch(e) {}
-                    try { fs.unlinkSync(`./static/miiQRs/${miiId}.jpg`); } catch(e) {}
+                    try { fs.unlinkSync(`./static/miiImgs/${miiId}.png`); } catch(e) {}
+                    try { fs.unlinkSync(`./static/miiQRs/${miiId}.png`); } catch(e) {}
                     
                     // Delete Mii data
                     delete storage.miis[miiId];
@@ -3339,13 +3661,52 @@ site.post('/uploadMii', upload.single('mii'), async (req, res) => {
         
         let mii;
         if (req.body.type === "wii") {
-            mii = miijs.convertMii(miijs.readWiiBin("./uploads/" + req.file.filename), "wii");
+            // Read Wii Mii and convert TO 3DS format
+            const wiiMii = await miijs.readWiiBin("./uploads/" + req.file.filename);
+            mii = miijs.convertMii(wiiMii, "3ds"); // ✅ Convert TO 3DS
         }
         else if (req.body.type === "3ds") {
             mii = await miijs.read3DSQR("./uploads/" + req.file.filename);
         }
         else if (req.body.type === "3dsbin") {
-            mii = await miijs.read3DSQR(req.body["3dsbin"]);
+            if (!req.file) {
+                res.send("{'error':'No file uploaded for 3DS bin'}");
+                return;
+            }
+            try {
+                // Read the uploaded file as a buffer
+                const binData = fs.readFileSync("./uploads/" + req.file.filename);
+                mii = await miijs.read3DSQR(binData);
+            } catch (e) {
+                console.error('Error reading 3DS bin file:', e);
+                res.send(`{'error':'Invalid 3DS bin file: ${e.message}'}`);
+                try { fs.unlinkSync("./uploads/" + req.file.filename); } catch (e2) { }
+                return;
+            }
+        }
+        else if (req.body.type === "3dsbin_amiibo") {
+            // Uploading from Amiibo extraction
+            const tempMiiId = req.body.fromAmiibo;
+            const tempBinPath = `./static/temp/${tempMiiId}.bin`;
+            
+            if (!fs.existsSync(tempBinPath)) {
+                res.send("{'error':'Amiibo Mii data not found. Please extract again.'}");
+                return;
+            }
+            
+            try {
+                const binData = fs.readFileSync(tempBinPath);
+                mii = await miijs.read3DSQR(binData, false);
+                
+                // Clean up temp files
+                try { fs.unlinkSync(tempBinPath); } catch (e) { }
+                try { fs.unlinkSync(`./static/miiImgs/${tempMiiId}.png`); } catch (e) { }
+                try { fs.unlinkSync(`./static/miiQRs/${tempMiiId}.png`); } catch (e) { }
+            } catch (e) {
+                console.error('Error reading Amiibo Mii:', e);
+                res.send(`{'error':'Invalid Amiibo Mii data: ${e.message}'}`);
+                return;
+            }
         }
         else {
             res.send("{'error':'No valid type specified'}");
@@ -3372,35 +3733,11 @@ site.post('/uploadMii', upload.single('mii'), async (req, res) => {
         mii.official = req.body.official;
         mii.published = false;
         mii.blockedFromPublishing = false;
-
-        // Add official Mii categorization
-        if (req.body.official) {
-            mii.officialCategories = [];
-            
-            // Parse games (multiple selections)
-            if (req.body.games) {
-                const games = Array.isArray(req.body.games) ? req.body.games : [req.body.games];
-                mii.officialCategories.push(...games.filter(g => g && g.trim()));
-            }
-            
-            // Parse custom category
-            if (req.body.customCategory && req.body.customCategory.trim()) {
-                mii.officialCategories.push(req.body.customCategory.trim());
-            }
-            
-            // Parse consoles (multiple selections)
-            if (req.body.consoles) {
-                const consoles = Array.isArray(req.body.consoles) ? req.body.consoles : [req.body.consoles];
-                mii.officialCategories.push(...consoles.filter(c => c && c.trim()));
-            }
-            
-            // Ensure uniqueness
-            mii.officialCategories = [...new Set(mii.officialCategories)];
-        }
         
         // Save to private folders
-        miijs.render3DSMiiFromJSON(mii, "./static/privateMiiImgs/" + mii.id + ".png");
-        miijs.write3DSQR(mii, "./static/privateMiiQRs/" + mii.id + ".png");
+        const miiImageData=await miijs.renderMii(mii);
+        fs.writeFileSync("./static/privateMiiImgs/" + mii.id + ".png", miiImageData);
+        await miijs.write3DSQR(mii, "./static/privateMiiQRs/" + mii.id + ".png");
         
         // Add to user's private Miis
         user.privateMiis.push(mii.id);
@@ -3422,30 +3759,34 @@ site.post('/uploadMii', upload.single('mii'), async (req, res) => {
                 "fields": [
                     {
                         "name": `Mii Name`,
-                        "value": mii.name || mii.meta?.name,
+                        "value": mii.meta?.name || mii.name || "Unknown",
                         "inline": true
                     },
                     {
                         "name": `Uploaded by`,
-                        "value": `[${uploader}](https://miis.kestron.com/user/${uploader})`,
+                        "value": `[${uploader}](https://infinimii.com/user/${uploader})`,
                         "inline": true
                     },
                     {
                         "name": `Mii Creator Name`,
-                        "value": mii.creatorName || mii.meta?.creatorName,
+                        "value": mii.meta?.creatorName || mii.creatorName || "Unknown",
                         "inline": true
                     }
                 ],
-                "thumbnail": {
-                    "url": `https://miis.kestron.com/privateMiiImgs/${mii.id}.jpg`,
-                    "height": 0,
-                    "width": 0
+                "image": {
+                    "url": `attachment://${mii.id}.png`
                 },
                 "footer": {
-                    "text": `View: https://miis.kestron.com/mii/${mii.id} | Uploaded at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
+                    "text": `View: https://infinimii.com/mii/${mii.id} | Uploaded at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
                 }
             }]
-        }));
+        }), [
+            {
+                data: miiImageData,
+                filename: `${mii.id}.png`,
+                contentType: 'image/png'
+            }
+        ]);
         
         setTimeout(() => { res.redirect("/myPrivateMiis") }, 2000);
     } catch (e) {
@@ -3499,7 +3840,7 @@ site.post('/updateOfficialCategories', async (req, res) => {
                 fields: [
                     {
                         name: 'Mii',
-                        value: `[${mii.meta?.name || mii.name}](https://miis.kestron.com/mii/${miiId})`,
+                        value: `[${mii.meta?.name || mii.name}](https://infinimii.com/mii/${miiId})`,
                         inline: true
                     },
                     {
@@ -3985,20 +4326,26 @@ site.post('/publishMii', async (req, res) => {
 
         // Move files from private to public folders
         try {
-            if (fs.existsSync(`./static/privateMiiImgs/${miiId}.jpg`)) {
-                fs.renameSync(`./static/privateMiiImgs/${miiId}.jpg`, `./static/miiImgs/${miiId}.jpg`);
-            } else if (fs.existsSync(`./static/privateMiiImgs/${miiId}.png`)) {
-                fs.renameSync(`./static/privateMiiImgs/${miiId}.png`, `./static/miiImgs/${miiId}.jpg`);
+            if (fs.existsSync(`./static/privateMiiImgs/${miiId}.png`)) {
+                fs.unlink(`./static/privateMiiImgs/${miiId}.png`);
             }
             
-            if (fs.existsSync(`./static/privateMiiQRs/${miiId}.jpg`)) {
-                fs.renameSync(`./static/privateMiiQRs/${miiId}.jpg`, `./static/miiQRs/${miiId}.jpg`);
-            } else if (fs.existsSync(`./static/privateMiiQRs/${miiId}.png`)) {
-                fs.renameSync(`./static/privateMiiQRs/${miiId}.png`, `./static/miiQRs/${miiId}.jpg`);
+            if (fs.existsSync(`./static/privateMiiQRs/${miiId}.png`)) {
+                fs.unlink(`./static/privateMiiQRs/${miiId}.png`);
             }
         } catch (e) {
             console.error('Error moving Mii files:', e);
             return res.json({ okay: false, error: 'Error moving Mii files' });
+        }
+
+        //Because of security for private images, we can't just move the folders, we have to make new renders.
+        var miiImageData;
+        if (!fs.existsSync(`./static/miiImgs/${mii.id}.png`)) {
+            miiImageData=await miijs.renderMii(mii);
+            fs.writeFileSync(`./static/miiImgs/${mii.id}.png`, miiImageData);
+        }
+        if (!fs.existsSync(`./static/miiQRs/${mii.id}.png`)) {
+            miijs.write3DSQR(mii, `./static/miiQRs/${mii.id}.png`);
         }
 
         // Update Mii status
@@ -4006,7 +4353,7 @@ site.post('/publishMii', async (req, res) => {
         
         // Move to public storage
         storage.miis[miiId] = mii;
-        storage.miiIds.push(miiId);
+        Object.keys(storage.miis).push(miiId);
         
         if (!user.submissions) user.submissions = [];
         user.submissions.push(miiId);
@@ -4033,20 +4380,24 @@ site.post('/publishMii', async (req, res) => {
                     },
                     {
                         "name": `Published by`,
-                        "value": `[${req.cookies.username}](https://miis.kestron.com/user/${req.cookies.username})`,
+                        "value": `[${req.cookies.username}](https://infinimii.com/user/${req.cookies.username})`,
                         "inline": true
                     }
                 ],
-                "thumbnail": {
-                    "url": `https://miis.kestron.com/miiImgs/${miiId}.jpg`,
-                    "height": 0,
-                    "width": 0
+                "image": {
+                    "url": `attachment://${miiId}.png`
                 },
                 "footer": {
-                    "text": `View: https://miis.kestron.com/mii/${miiId} | Published at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
+                    "text": `View: https://infinimii.com/mii/${miiId} | Published at ${d.getHours()}:${d.getMinutes()}, ${d.toDateString()} UTC`
                 }
             }]
-        }));
+        }), [
+            {
+                data: miiImageData,
+                filename: `${miiId}.png`,
+                contentType: 'image/png'
+            }
+        ]);
 
         res.json({ okay: true });
     } catch (e) {
@@ -4190,7 +4541,7 @@ site.post('/signup', async (req, res) => {
         moderator: false
     };
     
-    let link = "https://miis.kestron.com/verify?user=" + encodeURIComponent(req.body.username) + "&token=" + encodeURIComponent(token);
+    let link = "https://infinimii.com/verify?user=" + encodeURIComponent(req.body.username) + "&token=" + encodeURIComponent(token);
     sendEmail(req.body.email, "InfiniMii Verification", "Welcome to InfiniMii! Please verify your email by clicking this link: " + link);
     res.send("Check your email to verify your account!");
     save();

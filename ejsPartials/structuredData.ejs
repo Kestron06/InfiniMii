@@ -5,12 +5,12 @@
   "@context": "https://schema.org",
   "@type": "WebSite",
   "name": "InfiniMii",
-  "url": "https://yourdomain.com",
+  "url": "<%= baseUrl %>",
   "potentialAction": {
     "@type": "SearchAction",
     "target": {
       "@type": "EntryPoint",
-      "urlTemplate": "https://yourdomain.com/searchResults?q={search_term_string}"
+      "urlTemplate": "<%= baseUrl %>/searchResults?q={search_term_string}"
     },
     "query-input": "required name=search_term_string"
   }
@@ -23,10 +23,10 @@
 {
   "@context": "https://schema.org",
   "@type": ["WebSite", "SoftwareApplication"],
-  "@id": "https://yourdomain.com/#website",
+  "@id": "<%= baseUrl %>/#website",
   "name": "InfiniMii",
   "alternateName": ["InfiniMii - Mii Repository", "Mii Character Database"],
-  "url": "https://yourdomain.com",
+  "url": "<%= baseUrl %>",
   "applicationCategory": "UtilitiesApplication",
   "operatingSystem": "Web Browser",
   "offers": {
@@ -72,18 +72,18 @@
     "@type": "SearchAction",
     "target": {
       "@type": "EntryPoint",
-      "urlTemplate": "https://yourdomain.com/searchResults?q={search_term_string}"
+      "urlTemplate": "<%= baseUrl %>/searchResults?q={search_term_string}"
     },
     "query-input": "required name=search_term_string"
   },
   "provider": {
     "@type": "Organization",
-    "@id": "https://yourdomain.com/#organization",
+    "@id": "<%= baseUrl %>/#organization",
     "name": "InfiniMii",
-    "url": "https://yourdomain.com",
+    "url": "<%= baseUrl %>",
     "logo": {
       "@type": "ImageObject",
-      "url": "https://yourdomain.com/banner.png",
+      "url": "<%= baseUrl %>/banner.png",
       "width": "600",
       "height": "60"
     },
@@ -125,10 +125,10 @@
     "Binary file conversion",
     "Format optimization"
   ],
-  "screenshot": "https://yourdomain.com/screenshots/converter.jpg",
+  "screenshot": "<%= baseUrl %>/screenshots/converter.jpg",
   "softwareHelp": {
     "@type": "CreativeWork",
-    "url": "https://yourdomain.com/guides/transfer"
+    "url": "<%= baseUrl %>/guides/transfer"
   }
 }
 </script>

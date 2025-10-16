@@ -1,163 +1,237 @@
 .private-miis-container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 20px;
 }
 
 .private-header {
-    text-align: center;
-    margin-bottom: 30px;
+    background: linear-gradient(135deg, var(--brand-color) 0%, #1e88a8 100%);
+    padding: 2.5rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .private-header h1 {
-    color: #ff0000;
-    margin-bottom: 10px;
+    margin: 0 0 0.75rem 0;
+    font-size: 2.25rem;
+    font-weight: 600;
 }
 
 .limit-info {
-    font-size: 1.2em;
-    font-weight: bold;
-    color: #333;
-    margin: 10px 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    opacity: 0.95;
 }
 
 .info-text {
-    color: #666;
-    margin: 15px 0;
+    margin: 0 0 1.5rem 0;
+    opacity: 0.9;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    max-width: 700px;
 }
 
 .upload-button {
     display: inline-block;
-    background-color: #ff0000;
-    color: white;
-    padding: 12px 24px;
-    text-decoration: none;
+    background: white;
+    color: var(--brand-color);
+    padding: 0.875rem 2rem;
     border-radius: 8px;
-    margin-top: 15px;
-    font-weight: bold;
-    transition: background-color 0.3s;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .upload-button:hover {
-    background-color: #cc0000;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 #private-miis-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px;
-    margin-top: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
 }
 
 .private-mii-card {
-    background: white;
-    border: 2px solid #ddd;
+    background: var(--layer-2);
     border-radius: 12px;
-    padding: 15px;
-    transition: transform 0.2s, box-shadow 0.2s;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    display: flex;
+    flex-direction: column;
 }
 
 .private-mii-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    border-color: var(--brand-color);
+}
+
+.private-mii-card a {
+    display: block;
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    background: var(--layer-3);
+    overflow: hidden;
 }
 
 .private-mii-card img {
     width: 100%;
-    height: auto;
-    border-radius: 8px;
-    margin-bottom: 10px;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.private-mii-card:hover img {
+    transform: scale(1.05);
 }
 
 .mii-info {
-    margin-bottom: 15px;
+    padding: 1.25rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .mii-info h3 {
-    margin: 0 0 8px 0;
-    color: #333;
-    font-size: 1.1em;
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-1);
 }
 
 .mii-desc {
-    font-size: 0.9em;
-    color: #666;
-    margin: 5px 0;
+    font-size: 0.95rem;
+    color: var(--text-2);
+    line-height: 1.5;
+    margin: 0 0 1rem 0;
+    flex: 1;
 }
 
 .blocked-notice {
-    background-color: #ffe6e6;
-    color: #cc0000;
-    padding: 8px;
-    border-radius: 6px;
-    font-size: 0.9em;
-    margin-top: 10px;
-    border: 1px solid #ffcccc;
+    background: rgba(244, 67, 54, 0.1);
+    border: 1px solid rgba(244, 67, 54, 0.3);
+    border-radius: 8px;
+    padding: 0.875rem;
+    margin-bottom: 1rem;
+    color: #f44336;
+    font-weight: 500;
+    font-size: 0.95rem;
 }
 
 .blocked-notice small {
     display: block;
-    margin-top: 5px;
-    color: #666;
+    margin-top: 0.5rem;
+    color: var(--text-2);
+    font-weight: 400;
+    font-size: 0.85rem;
 }
 
 .mii-actions {
     display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0 1.25rem 1.25rem 1.25rem;
 }
 
 .mii-actions button {
     flex: 1;
-    padding: 10px;
+    padding: 0.75rem 1rem;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
     cursor: pointer;
-    font-weight: bold;
-    transition: all 0.3s;
-    min-width: 100px;
+    transition: all 0.2s ease;
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
 .publish-btn {
-    background-color: #00cc00;
+    background: var(--brand-color);
     color: white;
 }
 
 .publish-btn:hover {
-    background-color: #009900;
+    opacity: 0.9;
+    transform: translateY(-1px);
 }
 
 .delete-btn {
-    background-color: #ff4444;
+    background: #f44336;
     color: white;
 }
 
 .delete-btn:hover {
-    background-color: #cc0000;
+    background: #d32f2f;
+    transform: translateY(-1px);
 }
 
 .no-miis {
     text-align: center;
-    padding: 60px 20px;
-    color: #666;
+    padding: 4rem 2rem;
+    background: var(--layer-2);
+    border-radius: 12px;
+    border: 2px dashed var(--layer-3);
 }
 
 .no-miis p {
-    font-size: 1.2em;
-    margin-bottom: 20px;
+    font-size: 1.25rem;
+    color: var(--text-2);
+    margin: 0 0 2rem 0;
+}
+
+.no-miis::before {
+    content: "📭";
+    display: block;
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
 }
 
 @media (max-width: 768px) {
-    #private-miis-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 15px;
+    .private-header {
+        padding: 1.5rem;
     }
-    
+
+    .private-header h1 {
+        font-size: 1.75rem;
+    }
+
+    .limit-info {
+        font-size: 1.1rem;
+    }
+
+    .info-text {
+        font-size: 0.95rem;
+    }
+
+    #private-miis-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+
     .mii-actions {
         flex-direction: column;
     }
-    
+
     .mii-actions button {
         width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    #private-miis-grid {
+        grid-template-columns: 1fr;
     }
 }

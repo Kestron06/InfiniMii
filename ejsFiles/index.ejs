@@ -22,7 +22,7 @@
 						<h1><a href="<%= miiCategories[cat].link %>"><%= cat %></a></h1>
 						<% miiCategories[cat].miis.forEach(mii=>{ %>
 							<a class="miiThumb" href="/mii/<%= mii.id %>">
-								<img src="./miiImgs/<%= mii.id %>.jpg">
+								<img src="./miiImgs/<%= mii.id %>.png">
 								<h3><%= mii.meta.name %></h3>
 							</a>
 						<% }); %>
